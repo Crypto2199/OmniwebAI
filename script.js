@@ -7,6 +7,7 @@ toggleDark.onclick = () => {
 if (localStorage.getItem("darkMode") === "on") {
   document.body.classList.add("dark");
 }
+
 // البحث
 const searchInput = document.getElementById("searchInput");
 searchInput.addEventListener("input", function () {
@@ -15,6 +16,7 @@ searchInput.addEventListener("input", function () {
     card.style.display = card.innerText.toLowerCase().includes(value) ? "block" : "none";
   });
 });
+
 // الفئات
 const filterButtons = document.querySelectorAll(".category-filters button");
 filterButtons.forEach(btn => {
@@ -25,9 +27,10 @@ filterButtons.forEach(btn => {
     });
   };
 });
-// الترجمة
+
+// الترجمة الكاملة
 const langSelect = document.getElementById("langSelect");
-const elementsMap = {
+const staticKeys = {
   subtitle: "subtitle",
   searchInput: "search",
   btnAll: "all",
@@ -38,24 +41,38 @@ const elementsMap = {
   btnAudio: "audio",
   btnSearch: "search_category"
 };
+
 function applyTranslations(lang) {
   fetch("lang.json")
     .then(res => res.json())
     .then(data => {
       const t = data[lang];
       if (!t) return;
-      for (let id in elementsMap) {
-        const key = elementsMap[id];
+
+      // ترجمات ثابتة
+      for (let id in staticKeys) {
+        const key = staticKeys[id];
         const el = document.getElementById(id);
+        if (!el) continue;
         if (el.tagName === "INPUT") {
           el.placeholder = t[key];
         } else {
           el.textContent = t[key];
         }
       }
+
+      // ترجمات ديناميكية
+      document.querySelectorAll("[data-i18n]").forEach(el => {
+        const key = el.getAttribute("data-i18n");
+        if (t[key]) {
+          el.innerText = t[key];
+        }
+      });
+
       localStorage.setItem("lang", lang);
     });
 }
+
 langSelect.addEventListener("change", () => {
   applyTranslations(langSelect.value);
 });

@@ -1,0 +1,46 @@
+{
+  "ar": {
+    "subtitle": "دليلك الشامل لأفضل أدوات الذكاء الاصطناعي",
+    "search": "ابحث عن أداة...",
+    "all": "الكل",
+    "chat": "دردشة",
+    "image": "صور",
+    "writing": "كتابة",
+    "video": "فيديو",
+    "audio": "صوت",
+    "search_category": "بحث"
+  },
+  "en": {
+    "subtitle": "Your ultimate guide to the best AI tools",
+    "search": "Search for a tool...",
+    "all": "All",
+    "chat": "Chat",
+    "image": "Image",
+    "writing": "Writing",
+    "video": "Video",
+    "audio": "Audio",
+    "search_category": "Search"
+  },
+  "fr": {
+    "subtitle": "Votre guide ultime des meilleurs outils IA",
+    "search": "Rechercher un outil...",
+    "all": "Tous",
+    "chat": "Discussion",
+    "image": "Image",
+    "writing": "Écriture",
+    "video": "Vidéo",
+    "audio": "Audio",
+    "search_category": "Recherche"
+  },
+  "zh": {
+    "subtitle": "最佳AI工具终极指南",
+    "search": "搜索工具...",
+    "all": "全部",
+    "chat": "聊天",
+    "image": "图片",
+    "writing": "写作",
+    "video": "视频",
+    "audio": "音频",
+    "search_category": "搜索"
+  }
+}

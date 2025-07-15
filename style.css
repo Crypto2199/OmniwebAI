@@ -1,0 +1,47 @@
+
+body {
+  font-family: 'Arial', sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #f4f4f4;
+  direction: rtl;
+}
+header {
+  background-color: #111;
+  color: white;
+  padding: 30px 20px;
+  text-align: center;
+}
+input[type="text"] {
+  display: block;
+  margin: 20px auto;
+  padding: 12px;
+  width: 80%;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+.tools-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 20px;
+  padding: 20px;
+}
+.tool-card {
+  background-color: white;
+  padding: 15px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.tool-card h3 {
+  margin-top: 0;
+  color: #222;
+}
+.tool-card p {
+  color: #444;
+}
+.tool-card a {
+  text-decoration: none;
+  color: #0077cc;
+  font-weight: bold;
+}

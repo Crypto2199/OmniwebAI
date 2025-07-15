@@ -9,22 +9,81 @@
 <body>
   <header>
     <h1>🧠 OmniwebAI</h1>
-    <p>دليلك الشامل لأفضل أدوات الذكاء الاصطناعي</p>
+    <p id="subtitle">دليلك الشامل لأفضل أدوات الذكاء الاصطناعي</p>
+    <div class="controls">
+      <select id="langSelect">
+        <option value="ar">🇸🇦 العربية</option>
+        <option value="en">🇬🇧 English</option>
+        <option value="fr">🇫🇷 Français</option>
+        <option value="zh">🇨🇳 中文</option>
+      </select>
+      <button id="toggleDark">🌙/☀️</button>
+    </div>
   </header>
 
   <input type="text" id="searchInput" placeholder="ابحث عن أداة...">
 
+  <div class="category-filters">
+    <button data-category="all">الكل</button>
+    <button data-category="chat">دردشة</button>
+    <button data-category="image">صور</button>
+    <button data-category="writing">كتابة</button>
+    <button data-category="video">فيديو</button>
+    <button data-category="audio">صوت</button>
+    <button data-category="search">بحث</button>
+  </div>
+
   <div class="tools-container" id="toolsList">
-    <div class="tool-card"><h3>ChatGPT</h3><p>روبوت دردشة ذكي من OpenAI.</p><p><strong>الفئة:</strong> دردشة</p><a href="https://chat.openai.com" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>Midjourney</h3><p>مولد صور باستخدام الذكاء الاصطناعي عبر Discord.</p><p><strong>الفئة:</strong> صور</p><a href="https://www.midjourney.com" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>Notion AI</h3><p>مساعد كتابة ذكي داخل Notion.</p><p><strong>الفئة:</strong> كتابة</p><a href="https://www.notion.so/product/ai" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>Leonardo AI</h3><p>مولد صور وفن رقمي باستخدام الذكاء الاصطناعي.</p><p><strong>الفئة:</strong> صور</p><a href="https://leonardo.ai" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>Runway ML</h3><p>تحرير فيديوهات باستخدام الذكاء الاصطناعي.</p><p><strong>الفئة:</strong> فيديو</p><a href="https://runwayml.com" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>D-ID</h3><p>تحريك الصور الثابتة وتحويلها إلى فيديوهات واقعية.</p><p><strong>الفئة:</strong> فيديو</p><a href="https://www.d-id.com" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>ElevenLabs</h3><p>تحويل النصوص إلى أصوات واقعية متعددة اللغات.</p><p><strong>الفئة:</strong> صوت</p><a href="https://www.elevenlabs.io" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>Kaiber</h3><p>إنشاء فيديوهات متحركة من صور أو نصوص.</p><p><strong>الفئة:</strong> فيديو</p><a href="https://www.kaiber.ai" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>Copy.ai</h3><p>كتابة تسويقية تلقائية واحترافية.</p><p><strong>الفئة:</strong> كتابة</p><a href="https://www.copy.ai" target="_blank">🔗 جرب الآن</a></div>
-    <div class="tool-card"><h3>Perplexity AI</h3><p>محرك بحث ذكي يعتمد على نماذج اللغة.</p><p><strong>الفئة:</strong> بحث</p><a href="https://www.perplexity.ai" target="_blank">🔗 جرب الآن</a></div>
+    <div class="tool-card" data-category="chat">
+      <h3><img src="logos/chatgpt.png" alt="logo"> ChatGPT</h3>
+      <p>روبوت دردشة ذكي من OpenAI.</p>
+      <a href="https://chat.openai.com" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="image">
+      <h3><img src="logos/midjourney.png" alt="logo"> Midjourney</h3>
+      <p>مولد صور بالذكاء الاصطناعي عبر Discord.</p>
+      <a href="https://www.midjourney.com" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="writing">
+      <h3><img src="logos/notion.png" alt="logo"> Notion AI</h3>
+      <p>مساعد كتابة ذكي داخل Notion.</p>
+      <a href="https://www.notion.so/product/ai" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="image">
+      <h3><img src="logos/leonardo.png" alt="logo"> Leonardo AI</h3>
+      <p>فن رقمي وتوليد صور إبداعية.</p>
+      <a href="https://leonardo.ai" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="video">
+      <h3><img src="logos/runway.png" alt="logo"> Runway ML</h3>
+      <p>تحرير فيديو باستخدام الذكاء الاصطناعي.</p>
+      <a href="https://runwayml.com" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="video">
+      <h3><img src="logos/did.png" alt="logo"> D-ID</h3>
+      <p>تحريك الصور وتحويلها لفيديو.</p>
+      <a href="https://www.d-id.com" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="audio">
+      <h3><img src="logos/elevenlabs.png" alt="logo"> ElevenLabs</h3>
+      <p>تحويل النص إلى صوت واقعي.</p>
+      <a href="https://www.elevenlabs.io" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="video">
+      <h3><img src="logos/kaiber.png" alt="logo"> Kaiber</h3>
+      <p>تحويل صورك إلى فيديو مذهل.</p>
+      <a href="https://www.kaiber.ai" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="writing">
+      <h3><img src="logos/copyai.png" alt="logo"> Copy.ai</h3>
+      <p>كتابة تسويقية ذكية وسريعة.</p>
+      <a href="https://www.copy.ai" target="_blank">🔗 جرب الآن</a>
+    </div>
+    <div class="tool-card" data-category="search">
+      <h3><img src="logos/perplexity.png" alt="logo"> Perplexity AI</h3>
+      <p>محرك بحث ذكي بمساعدة الذكاء الاصطناعي.</p>
+      <a href="https://www.perplexity.ai" target="_blank">🔗 جرب الآن</a>
+    </div>
   </div>
 
   <script src="script.js"></script>

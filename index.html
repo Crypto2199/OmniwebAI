@@ -1,94 +1,492 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>OmniwebAI</title>
-  <link rel="icon" type="image/png" href="favicon-32x32.png">
-  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
-  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Omni Blocks</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes flash {
+            0%, 100% { background-color: transparent; }
+            50% { background-color: rgba(253, 224, 71, 0.5); }
+        }
+        
+        .flash-row {
+            animation: flash 0.3s ease-in-out 2;
+        }
+        
+        .game-container {
+            touch-action: none;
+        }
+        
+        @media (max-width: 640px) {
+            .controls {
+                display: grid;
+                grid-template-areas:
+                    ". up ."
+                    "left down right";
+                grid-gap: 10px;
+                margin-top: 20px;
+            }
+            
+            .up { grid-area: up; }
+            .left { grid-area: left; }
+            .down { grid-area: down; }
+            .right { grid-area: right; }
+            
+            .control-btn {
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
+        }
+    </style>
 </head>
-<body>
-  <header>
-    <h1>🤖 OmniwebAI</h1>
-    <p id="subtitle">دليلك الشامل لأفضل أدوات الذكاء الاصطناعي</p>
-    <div class="controls">
-      <select id="langSelect">
-        <option value="ar">🇸🇦 العربية</option>
-        <option value="en">🇬🇧 English</option>
-        <option value="fr">🇫🇷 Français</option>
-        <option value="zh">🇨🇳 中文</option>
-      </select>
-      <button id="toggleDark">🌙/☀️</button>
-    </div>
-  </header>
+<body class="bg-black text-yellow-300 font-mono min-h-screen flex flex-col items-center justify-center p-4">
+    <div class="max-w-4xl w-full">
+        <header class="text-center mb-6">
+            <h1 class="text-4xl md:text-6xl font-bold mb-2">OMNI BLOCKS</h1>
+            <div class="flex justify-center space-x-8 text-xl">
+                <div>
+                    <span class="font-bold">SCORE:</span>
+                    <span id="score">0</span>
+                </div>
+                <div>
+                    <span class="font-bold">LEVEL:</span>
+                    <span id="level">1</span>
+                </div>
+            </div>
+        </header>
 
-  <input type="text" id="searchInput" placeholder="ابحث عن أداة...">
+        <div class="flex flex-col md:flex-row items-center justify-center gap-8">
+            <div class="game-container relative border-4 border-yellow-300 bg-black">
+                <canvas id="gameCanvas" class="block" width="300" height="600"></canvas>
+                <div id="gameOver" class="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center hidden">
+                    <h2 class="text-3xl font-bold mb-4">GAME OVER</h2>
+                    <p class="text-xl mb-6">Final Score: <span id="finalScore">0</span></p>
+                    <button id="restartBtn" class="bg-yellow-300 text-black px-6 py-2 rounded font-bold hover:bg-yellow-400 transition">
+                        PLAY AGAIN
+                    </button>
+                </div>
+            </div>
 
-  <div class="category-filters">
-    <button id="btnAll" data-category="all">الكل</button>
-    <button id="btnChat" data-category="chat">دردشة</button>
-    <button id="btnImage" data-category="image">صور</button>
-    <button id="btnWriting" data-category="writing">كتابة</button>
-    <button id="btnVideo" data-category="video">فيديو</button>
-    <button id="btnAudio" data-category="audio">صوت</button>
-    <button id="btnSearch" data-category="search">بحث</button>
-  </div>
+            <div class="mt-4 md:mt-0">
+                <div class="mb-6">
+                    <h3 class="text-xl font-bold mb-2">NEXT BLOCK:</h3>
+                    <canvas id="nextBlockCanvas" width="120" height="120" class="border-2 border-yellow-300 bg-black"></canvas>
+                </div>
+                
+                <div class="controls hidden md:block">
+                    <div class="space-y-4">
+                        <div class="flex justify-center">
+                            <button id="upBtn" class="control-btn bg-yellow-300 text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
+                                ↑
+                            </button>
+                        </div>
+                        <div class="flex justify-center space-x-4">
+                            <button id="leftBtn" class="control-btn bg-yellow-300 text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
+                                ←
+                            </button>
+                            <button id="downBtn" class="control-btn bg-yellow-300 text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
+                                ↓
+                            </button>
+                            <button id="rightBtn" class="control-btn bg-yellow-300 text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
+                                →
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-  <div class="tools-container" id="toolsList">
-    <div class="tool-card" data-category="chat">
-      <h3><img src="logos/chatgpt.png" alt="logo"> <span data-i18n="tool_chatgpt_name">ChatGPT</span></h3>
-      <p data-i18n="tool_chatgpt_desc">روبوت دردشة ذكي من OpenAI.</p>
-      <a href="https://chat.openai.com" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="image">
-      <h3><img src="logos/midjourney.png" alt="logo"> <span data-i18n="tool_midjourney_name">Midjourney</span></h3>
-      <p data-i18n="tool_midjourney_desc">مولد صور بالذكاء الاصطناعي عبر Discord.</p>
-      <a href="https://www.midjourney.com" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="writing">
-      <h3><img src="logos/notion.png" alt="logo"> <span data-i18n="tool_notion_name">Notion AI</span></h3>
-      <p data-i18n="tool_notion_desc">مساعد كتابة ذكي داخل Notion.</p>
-      <a href="https://www.notion.so/product/ai" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="image">
-      <h3><img src="logos/leonardo.png" alt="logo"> <span data-i18n="tool_leonardo_name">Leonardo AI</span></h3>
-      <p data-i18n="tool_leonardo_desc">فن رقمي وتوليد صور إبداعية.</p>
-      <a href="https://leonardo.ai" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="video">
-      <h3><img src="logos/runway.png" alt="logo"> <span data-i18n="tool_runway_name">Runway ML</span></h3>
-      <p data-i18n="tool_runway_desc">تحرير فيديو باستخدام الذكاء الاصطناعي.</p>
-      <a href="https://runwayml.com" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="video">
-      <h3><img src="logos/did.png" alt="logo"> <span data-i18n="tool_did_name">D-ID</span></h3>
-      <p data-i18n="tool_did_desc">تحريك الصور وتحويلها لفيديو.</p>
-      <a href="https://www.d-id.com" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="audio">
-      <h3><img src="logos/elevenlabs.png" alt="logo"> <span data-i18n="tool_elevenlabs_name">ElevenLabs</span></h3>
-      <p data-i18n="tool_elevenlabs_desc">تحويل النص إلى صوت واقعي.</p>
-      <a href="https://www.elevenlabs.io" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="video">
-      <h3><img src="logos/kaiber.png" alt="logo"> <span data-i18n="tool_kaiber_name">Kaiber</span></h3>
-      <p data-i18n="tool_kaiber_desc">تحويل صورك إلى فيديو مذهل.</p>
-      <a href="https://www.kaiber.ai" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="writing">
-      <h3><img src="logos/copyai.png" alt="logo"> <span data-i18n="tool_copyai_name">Copy.ai</span></h3>
-      <p data-i18n="tool_copyai_desc">كتابة تسويقية ذكية وسريعة.</p>
-      <a href="https://www.copy.ai" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-    <div class="tool-card" data-category="search">
-      <h3><img src="logos/perplexity.png" alt="logo"> <span data-i18n="tool_perplexity_name">Perplexity AI</span></h3>
-      <p data-i18n="tool_perplexity_desc">محرك بحث ذكي بمساعدة الذكاء الاصطناعي.</p>
-      <a href="https://www.perplexity.ai" target="_blank" data-i18n="try_now">🔗 جرب الآن</a>
-    </div>
-  </div>
+        <div class="controls md:hidden mt-6">
+            <div class="flex flex-col items-center">
+                <button id="upBtnMobile" class="control-btn up bg-yellow-300 text-black rounded-full w-16 h-16 flex items-center justify-center font-bold hover:bg-yellow-400 transition mb-2">
+                    ↑
+                </button>
+                <div class="flex space-x-4">
+                    <button id="leftBtnMobile" class="control-btn left bg-yellow-300 text-black rounded-full w-16 h-16 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
+                        ←
+                    </button>
+                    <button id="downBtnMobile" class="control-btn down bg-yellow-300 text-black rounded-full w-16 h-16 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
+                        ↓
+                    </button>
+                    <button id="rightBtnMobile" class="control-btn right bg-yellow-300 text-black rounded-full w-16 h-16 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
+                        →
+                    </button>
+                </div>
+            </div>
+        </div>
 
-  <script src="script.js"></script>
+        <div class="mt-8 text-center text-sm opacity-75">
+            <p>Use arrow keys or buttons to move. Up arrow to rotate.</p>
+            <p class="mt-1">Fill rows to clear them and earn points!</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game constants
+            const COLS = 10;
+            const ROWS = 20;
+            const BLOCK_SIZE = 30;
+            const COLORS = [
+                null,
+                '#FFEB3B', // Yellow
+                '#FFC107', // Amber
+                '#FF9800', // Orange
+                '#FF5722', // Deep Orange
+                '#795548', // Brown
+                '#9E9E9E', // Grey
+                '#607D8B'  // Blue Grey
+            ];
+            
+            // Game variables
+            let canvas = document.getElementById('gameCanvas');
+            let ctx = canvas.getContext('2d');
+            let nextBlockCanvas = document.getElementById('nextBlockCanvas');
+            let nextBlockCtx = nextBlockCanvas.getContext('2d');
+            let score = 0;
+            let level = 1;
+            let gameOver = false;
+            let dropCounter = 0;
+            let dropInterval = 1000;
+            let lastTime = 0;
+            let board = createMatrix(COLS, ROWS);
+            let player = {
+                pos: {x: 0, y: 0},
+                matrix: null,
+                score: 0
+            };
+            
+            // Scale canvas for high DPI displays
+            scaleCanvas(canvas, ctx);
+            scaleCanvas(nextBlockCanvas, nextBlockCtx);
+            
+            // Event listeners
+            document.addEventListener('keydown', handleKeyPress);
+            document.getElementById('restartBtn').addEventListener('click', resetGame);
+            
+            // Control buttons
+            const upBtn = document.getElementById('upBtn') || document.getElementById('upBtnMobile');
+            const leftBtn = document.getElementById('leftBtn') || document.getElementById('leftBtnMobile');
+            const downBtn = document.getElementById('downBtn') || document.getElementById('downBtnMobile');
+            const rightBtn = document.getElementById('rightBtn') || document.getElementById('rightBtnMobile');
+            
+            if (upBtn) upBtn.addEventListener('click', () => playerRotate(1));
+            if (leftBtn) leftBtn.addEventListener('click', () => playerMove(-1));
+            if (rightBtn) rightBtn.addEventListener('click', () => playerMove(1));
+            if (downBtn) downBtn.addEventListener('click', () => playerDrop());
+            
+            // Initialize game
+            resetGame();
+            updateScore();
+            
+            // Game loop
+            function update(time = 0) {
+                if (gameOver) return;
+                
+                const deltaTime = time - lastTime;
+                lastTime = time;
+                
+                dropCounter += deltaTime;
+                if (dropCounter > dropInterval) {
+                    playerDrop();
+                }
+                
+                draw();
+                requestAnimationFrame(update);
+            }
+            
+            function draw() {
+                // Clear canvas
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Draw board
+                drawMatrix(board, {x: 0, y: 0}, ctx);
+                
+                // Draw player
+                drawMatrix(player.matrix, player.pos, ctx);
+            }
+            
+            function drawMatrix(matrix, offset, context) {
+                matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) {
+                            context.fillStyle = COLORS[value];
+                            context.fillRect(
+                                (offset.x + x) * BLOCK_SIZE,
+                                (offset.y + y) * BLOCK_SIZE,
+                                BLOCK_SIZE,
+                                BLOCK_SIZE
+                            );
+                            
+                            // Add border to blocks
+                            context.strokeStyle = '#000';
+                            context.lineWidth = 2;
+                            context.strokeRect(
+                                (offset.x + x) * BLOCK_SIZE,
+                                (offset.y + y) * BLOCK_SIZE,
+                                BLOCK_SIZE,
+                                BLOCK_SIZE
+                            );
+                        }
+                    });
+                });
+            }
+            
+            function merge() {
+                player.matrix.forEach((row, y) => {
+                    row.forEach((value, x) => {
+                        if (value !== 0) {
+                            board[y + player.pos.y][x + player.pos.x] = value;
+                        }
+                    });
+                });
+            }
+            
+            function playerMove(dir) {
+                player.pos.x += dir;
+                if (collide()) {
+                    player.pos.x -= dir;
+                }
+            }
+            
+            function playerRotate(dir) {
+                const pos = player.pos.x;
+                let offset = 1;
+                rotate(player.matrix, dir);
+                
+                while (collide()) {
+                    player.pos.x += offset;
+                    offset = -(offset + (offset > 0 ? 1 : -1));
+                    if (offset > player.matrix[0].length) {
+                        rotate(player.matrix, -dir);
+                        player.pos.x = pos;
+                        return;
+                    }
+                }
+            }
+            
+            function rotate(matrix, dir) {
+                for (let y = 0; y < matrix.length; ++y) {
+                    for (let x = 0; x < y; ++x) {
+                        [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+                    }
+                }
+                
+                if (dir > 0) {
+                    matrix.forEach(row => row.reverse());
+                } else {
+                    matrix.reverse();
+                }
+            }
+            
+            function playerDrop() {
+                player.pos.y++;
+                if (collide()) {
+                    player.pos.y--;
+                    merge();
+                    playerReset();
+                    arenaSweep();
+                    updateScore();
+                }
+                dropCounter = 0;
+            }
+            
+            function collide() {
+                const [m, o] = [player.matrix, player.pos];
+                for (let y = 0; y < m.length; ++y) {
+                    for (let x = 0; x < m[y].length; ++x) {
+                        if (m[y][x] !== 0 &&
+                            (board[y + o.y] === undefined ||
+                             board[y + o.y][x + o.x] === undefined ||
+                             board[y + o.y][x + o.x] !== 0)) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            
+            function playerReset() {
+                const pieces = 'ILJOTSZ';
+                const nextPiece = pieces[pieces.length * Math.random() | 0];
+                player.matrix = createPiece(nextPiece);
+                player.pos.y = 0;
+                player.pos.x = (board[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
+                
+                // Draw next block preview
+                drawNextBlock(nextPiece);
+                
+                // Game over
+                if (collide()) {
+                    document.getElementById('finalScore').textContent = score;
+                    document.getElementById('gameOver').classList.remove('hidden');
+                    gameOver = true;
+                }
+            }
+            
+            function drawNextBlock(type) {
+                nextBlockCtx.fillStyle = '#000';
+                nextBlockCtx.fillRect(0, 0, nextBlockCanvas.width, nextBlockCanvas.height);
+                
+                const matrix = createPiece(type);
+                const offset = {
+                    x: (nextBlockCanvas.width / BLOCK_SIZE / 2) - (matrix[0].length / 2),
+                    y: (nextBlockCanvas.height / BLOCK_SIZE / 2) - (matrix.length / 2)
+                };
+                
+                drawMatrix(matrix, offset, nextBlockCtx);
+            }
+            
+            function arenaSweep() {
+                let rowCount = 0;
+                
+                outer: for (let y = board.length - 1; y >= 0; --y) {
+                    for (let x = 0; x < board[y].length; ++x) {
+                        if (board[y][x] === 0) {
+                            continue outer;
+                        }
+                    }
+                    
+                    // Mark row for flashing
+                    const row = document.createElement('div');
+                    row.className = 'flash-row';
+                    document.body.appendChild(row);
+                    setTimeout(() => row.remove(), 600);
+                    
+                    // Remove the row and add empty row at top
+                    const rowRemoved = board.splice(y, 1)[0].fill(0);
+                    board.unshift(rowRemoved);
+                    ++y;
+                    
+                    rowCount++;
+                }
+                
+                if (rowCount > 0) {
+                    // Update score based on rows cleared
+                    const points = [0, 40, 100, 300, 1200][rowCount] * level;
+                    score += points;
+                    
+                    // Level up every 10 rows (adjust as needed)
+                    const newLevel = Math.floor(score / 1000) + 1;
+                    if (newLevel > level) {
+                        level = newLevel;
+                        // Increase speed (reduce drop interval)
+                        dropInterval = Math.max(100, 1000 - (level * 100));
+                    }
+                }
+            }
+            
+            function updateScore() {
+                document.getElementById('score').textContent = score;
+                document.getElementById('level').textContent = level;
+            }
+            
+            function resetGame() {
+                board = createMatrix(COLS, ROWS);
+                score = 0;
+                level = 1;
+                dropInterval = 1000;
+                gameOver = false;
+                document.getElementById('gameOver').classList.add('hidden');
+                playerReset();
+                update();
+            }
+            
+            function handleKeyPress(e) {
+                if (gameOver) return;
+                
+                switch(e.keyCode) {
+                    case 37: // Left arrow
+                        playerMove(-1);
+                        break;
+                    case 39: // Right arrow
+                        playerMove(1);
+                        break;
+                    case 40: // Down arrow
+                        playerDrop();
+                        break;
+                    case 38: // Up arrow
+                        playerRotate(1);
+                        break;
+                    case 32: // Space
+                        playerDrop();
+                        break;
+                }
+            }
+            
+            // Helper functions
+            function createMatrix(w, h) {
+                const matrix = [];
+                while (h--) {
+                    matrix.push(new Array(w).fill(0));
+                }
+                return matrix;
+            }
+            
+            function createPiece(type) {
+                switch (type) {
+                    case 'I':
+                        return [
+                            [0, 0, 0, 0],
+                            [1, 1, 1, 1],
+                            [0, 0, 0, 0],
+                            [0, 0, 0, 0]
+                        ];
+                    case 'L':
+                        return [
+                            [0, 0, 0],
+                            [2, 2, 2],
+                            [2, 0, 0]
+                        ];
+                    case 'J':
+                        return [
+                            [0, 0, 0],
+                            [3, 3, 3],
+                            [0, 0, 3]
+                        ];
+                    case 'O':
+                        return [
+                            [4, 4],
+                            [4, 4]
+                        ];
+                    case 'T':
+                        return [
+                            [0, 0, 0],
+                            [5, 5, 5],
+                            [0, 5, 0]
+                        ];
+                    case 'S':
+                        return [
+                            [0, 0, 0],
+                            [0, 6, 6],
+                            [6, 6, 0]
+                        ];
+                    case 'Z':
+                        return [
+                            [0, 0, 0],
+                            [7, 7, 0],
+                            [0, 7, 7]
+                        ];
+                }
+            }
+            
+            function scaleCanvas(canvas, context) {
+                const dpr = window.devicePixelRatio || 1;
+                const rect = canvas.getBoundingClientRect();
+                
+                canvas.width = rect.width * dpr;
+                canvas.height = rect.height * dpr;
+                
+                context.scale(dpr, dpr);
+                
+                canvas.style.width = `${rect.width}px`;
+                canvas.style.height = `${rect.height}px`;
+            }
+        });
+    </script>
 </body>
 </html>

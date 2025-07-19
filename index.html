@@ -3,490 +3,873 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Omni Blocks</title>
+    <title>Big Smoke - GTA Style Game</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        @keyframes flash {
-            0%, 100% { background-color: transparent; }
-            50% { background-color: rgba(253, 224, 71, 0.5); }
+        @font-face {
+            font-family: 'GTA';
+            src: url('https://fonts.cdnfonts.com/css/pricedown') format('woff2');
         }
         
-        .flash-row {
-            animation: flash 0.3s ease-in-out 2;
+        body {
+            overflow: hidden;
+            touch-action: none;
+            font-family: 'Arial', sans-serif;
         }
         
-        .game-container {
+        .gta-font {
+            font-family: 'GTA', sans-serif;
+        }
+        
+        #gameCanvas {
+            background-color: #333;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        .joystick-area {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            width: 120px;
+            height: 120px;
+            background-color: rgba(0, 0, 0, 0.3);
+            border-radius: 50%;
             touch-action: none;
         }
         
-        @media (max-width: 640px) {
-            .controls {
-                display: grid;
-                grid-template-areas:
-                    ". up ."
-                    "left down right";
-                grid-gap: 10px;
-                margin-top: 20px;
-            }
-            
-            .up { grid-area: up; }
-            .left { grid-area: left; }
-            .down { grid-area: down; }
-            .right { grid-area: right; }
-            
-            .control-btn {
-                width: 60px;
-                height: 60px;
-                font-size: 24px;
-            }
+        .joystick {
+            position: absolute;
+            width: 60px;
+            height: 60px;
+            background-color: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            top: 30px;
+            left: 30px;
+            touch-action: none;
+        }
+        
+        .mission-popup {
+            animation: slideIn 0.5s forwards;
+        }
+        
+        @keyframes slideIn {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        
+        .wanted-level {
+            transition: all 0.3s ease;
+        }
+        
+        .wanted-star {
+            filter: drop-shadow(0 0 2px yellow);
         }
     </style>
 </head>
-<body class="bg-black text-yellow-300 font-mono min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="max-w-4xl w-full">
-        <header class="text-center mb-6">
-            <h1 class="text-4xl md:text-6xl font-bold mb-2">OMNI BLOCKS</h1>
-            <div class="flex justify-center space-x-8 text-xl">
-                <div>
-                    <span class="font-bold">SCORE:</span>
-                    <span id="score">0</span>
-                </div>
-                <div>
-                    <span class="font-bold">LEVEL:</span>
-                    <span id="level">1</span>
-                </div>
-            </div>
-        </header>
+<body class="bg-black text-white relative h-screen overflow-hidden">
+    <!-- Language Toggle -->
+    <div class="absolute top-4 right-4 z-50">
+        <button id="languageToggle" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-2 px-4 rounded-full flex items-center gap-2">
+            <i class="fas fa-language"></i>
+            <span id="currentLanguage">EN</span>
+        </button>
+    </div>
 
-        <div class="flex flex-col md:flex-row items-center justify-center gap-8">
-            <div class="game-container relative border-4 border-yellow-300 bg-black">
-                <canvas id="gameCanvas" class="block" width="300" height="600"></canvas>
-                <div id="gameOver" class="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center hidden">
-                    <h2 class="text-3xl font-bold mb-4">GAME OVER</h2>
-                    <p class="text-xl mb-6">Final Score: <span id="finalScore">0</span></p>
-                    <button id="restartBtn" class="bg-yellow-300 text-black px-6 py-2 rounded font-bold hover:bg-yellow-400 transition">
-                        PLAY AGAIN
-                    </button>
-                </div>
-            </div>
+    <!-- Game Title -->
+    <div class="absolute top-4 left-4 z-50">
+        <h1 class="gta-font text-4xl md:text-6xl text-yellow-400 drop-shadow-lg">BIG SMOKE</h1>
+    </div>
 
-            <div class="mt-4 md:mt-0">
-                <div class="mb-6">
-                    <h3 class="text-xl font-bold mb-2">NEXT BLOCK:</h3>
-                    <canvas id="nextBlockCanvas" width="120" height="120" class="border-2 border-yellow-300 bg-black"></canvas>
-                </div>
-                
-                <div class="controls hidden md:block">
-                    <div class="space-y-4">
-                        <div class="flex justify-center">
-                            <button id="upBtn" class="control-btn bg-yellow-300 text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
-                                ↑
-                            </button>
-                        </div>
-                        <div class="flex justify-center space-x-4">
-                            <button id="leftBtn" class="control-btn bg-yellow-300 text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
-                                ←
-                            </button>
-                            <button id="downBtn" class="control-btn bg-yellow-300 text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
-                                ↓
-                            </button>
-                            <button id="rightBtn" class="control-btn bg-yellow-300 text-black rounded-full w-12 h-12 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
-                                →
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas" class="absolute inset-0 w-full h-full"></canvas>
+
+    <!-- Mobile Controls -->
+    <div class="md:hidden">
+        <div class="joystick-area" id="joystickArea">
+            <div class="joystick" id="joystick"></div>
         </div>
-
-        <div class="controls md:hidden mt-6">
-            <div class="flex flex-col items-center">
-                <button id="upBtnMobile" class="control-btn up bg-yellow-300 text-black rounded-full w-16 h-16 flex items-center justify-center font-bold hover:bg-yellow-400 transition mb-2">
-                    ↑
-                </button>
-                <div class="flex space-x-4">
-                    <button id="leftBtnMobile" class="control-btn left bg-yellow-300 text-black rounded-full w-16 h-16 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
-                        ←
-                    </button>
-                    <button id="downBtnMobile" class="control-btn down bg-yellow-300 text-black rounded-full w-16 h-16 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
-                        ↓
-                    </button>
-                    <button id="rightBtnMobile" class="control-btn right bg-yellow-300 text-black rounded-full w-16 h-16 flex items-center justify-center font-bold hover:bg-yellow-400 transition">
-                        →
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="mt-8 text-center text-sm opacity-75">
-            <p>Use arrow keys or buttons to move. Up arrow to rotate.</p>
-            <p class="mt-1">Fill rows to clear them and earn points!</p>
+        
+        <div class="absolute bottom-20 right-4 flex flex-col gap-4">
+            <button id="actionBtn" class="bg-green-500 hover:bg-green-600 text-white font-bold w-16 h-16 rounded-full flex items-center justify-center">
+                <i class="fas fa-running text-xl"></i>
+            </button>
         </div>
     </div>
 
+    <!-- Game UI -->
+    <div class="absolute bottom-4 left-4 z-50 flex items-center gap-4">
+        <!-- Money Display -->
+        <div class="bg-black bg-opacity-70 p-2 rounded-lg flex items-center gap-2">
+            <i class="fas fa-dollar-sign text-yellow-400"></i>
+            <span id="moneyDisplay" class="font-bold">$0</span>
+        </div>
+        
+        <!-- Wanted Level -->
+        <div id="wantedLevel" class="wanted-level bg-black bg-opacity-70 p-2 rounded-lg hidden">
+            <div class="flex gap-1">
+                <i class="fas fa-star wanted-star text-gray-400"></i>
+                <i class="fas fa-star wanted-star text-gray-400"></i>
+                <i class="fas fa-star wanted-star text-gray-400"></i>
+                <i class="fas fa-star wanted-star text-gray-400"></i>
+                <i class="fas fa-star wanted-star text-gray-400"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mission Popup -->
+    <div id="missionPopup" class="mission-popup fixed bottom-0 left-0 right-0 bg-black bg-opacity-90 p-4 transform translate-y-full hidden">
+        <h3 class="text-yellow-400 font-bold text-xl mb-2" id="missionTitle">NEW MISSION</h3>
+        <p id="missionDescription" class="text-white">Go to the marked location on your map</p>
+        <div class="mt-4 flex justify-between items-center">
+            <span id="missionReward" class="text-green-400 font-bold">Reward: $500</span>
+            <button id="startMissionBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-1 px-4 rounded">
+                ACCEPT
+            </button>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="absolute inset-0 bg-black bg-opacity-90 flex flex-col items-center justify-center z-50">
+        <h1 class="gta-font text-5xl md:text-8xl text-yellow-400 mb-8 drop-shadow-lg">BIG SMOKE</h1>
+        <div class="text-center mb-8">
+            <p class="text-xl mb-4" id="welcomeText">Welcome to Los Santos</p>
+            <p class="text-gray-400" id="instructionsText">Use arrow keys or touch controls to move</p>
+        </div>
+        <button id="startGameBtn" class="bg-yellow-500 hover:bg-yellow-600 text-black font-bold py-3 px-8 rounded-full text-xl">
+            START GAME
+        </button>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pauseMenu" class="absolute inset-0 bg-black bg-opacity-90 hidden flex-col items-center justify-center z-50">
+        <h1 class="gta-font text-5xl md:text-8xl text-yellow-400 mb-8 drop-shadow-lg">GAME PAUSED</h1>
+        <div class="flex flex-col gap-4 w-64">
+            <button id="resumeGameBtn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-8 rounded-full">
+                RESUME
+            </button>
+            <button id="restartGameBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-full">
+                RESTART
+            </button>
+            <button id="quitGameBtn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-8 rounded-full">
+                QUIT
+            </button>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="absolute bottom-0 right-0 p-2 text-xs text-gray-500 z-50">
+        Developed by BAIKER AHMED<br>
+        Email: baikerahmed99@gmail.com<br>
+        Telegram: @crypto2199
+    </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Game constants
-            const COLS = 10;
-            const ROWS = 20;
-            const BLOCK_SIZE = 30;
-            const COLORS = [
-                null,
-                '#FFEB3B', // Yellow
-                '#FFC107', // Amber
-                '#FF9800', // Orange
-                '#FF5722', // Deep Orange
-                '#795548', // Brown
-                '#9E9E9E', // Grey
-                '#607D8B'  // Blue Grey
+        // Game Variables
+        let canvas, ctx;
+        let gameRunning = false;
+        let isPaused = false;
+        let currentLanguage = 'en';
+        let player = {
+            x: 100,
+            y: 100,
+            width: 30,
+            height: 30,
+            speed: 3,
+            color: '#3498db',
+            direction: 'down',
+            isRunning: false
+        };
+        
+        let money = 0;
+        let wantedLevel = 0;
+        let currentMission = null;
+        let missions = [];
+        let police = [];
+        let buildings = [];
+        let roads = [];
+        let collectibles = [];
+        let keysPressed = {};
+        let touchJoystick = { active: false, x: 0, y: 0, dx: 0, dy: 0 };
+        
+        // Game Text Translations
+        const translations = {
+            en: {
+                title: "BIG SMOKE",
+                welcome: "Welcome to Los Santos",
+                instructions: "Use arrow keys or touch controls to move",
+                start: "START GAME",
+                paused: "GAME PAUSED",
+                resume: "RESUME",
+                restart: "RESTART",
+                quit: "QUIT",
+                missionTitle: "NEW MISSION",
+                missionDesc: "Go to the marked location on your map",
+                accept: "ACCEPT",
+                money: "Money",
+                wanted: "Wanted Level",
+                language: "EN"
+            },
+            ar: {
+                title: "بيج سموك",
+                welcome: "مرحبًا بكم في لوس سانتوس",
+                instructions: "استخدم مفاتيح الأسهم أو عناصر التحكم باللمس للتحرك",
+                start: "بدء اللعبة",
+                paused: "اللعبة متوقفة",
+                resume: "استئناف",
+                restart: "إعادة التشغيل",
+                quit: "خروج",
+                missionTitle: "مهمة جديدة",
+                missionDesc: "اذهب إلى الموقع المحدد على الخريطة",
+                accept: "قبول",
+                money: "مال",
+                wanted: "مستوى المطلوبية",
+                language: "AR"
+            }
+        };
+        
+        // Initialize Game
+        function initGame() {
+            canvas = document.getElementById('gameCanvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Generate game world
+            generateWorld();
+            
+            // Create initial mission
+            createMission("Collect the package", 500, 300, 300);
+            
+            // Set up controls
+            setupControls();
+            
+            // Set up UI events
+            setupUI();
+            
+            // Update language
+            updateLanguage();
+            
+            // Start game loop
+            gameLoop();
+        }
+        
+        // Resize canvas to fit window
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        
+        // Generate game world
+        function generateWorld() {
+            // Create buildings
+            buildings = [];
+            for (let i = 0; i < 15; i++) {
+                buildings.push({
+                    x: Math.random() * (canvas.width - 100),
+                    y: Math.random() * (canvas.height - 100),
+                    width: 80 + Math.random() * 100,
+                    height: 80 + Math.random() * 100,
+                    color: `hsl(${Math.random() * 360}, 50%, 50%)`
+                });
+            }
+            
+            // Create roads
+            roads = [
+                { x: 0, y: canvas.height / 2, width: canvas.width, height: 60, color: '#333' },
+                { x: canvas.width / 2, y: 0, width: 60, height: canvas.height, color: '#333' }
             ];
             
-            // Game variables
-            let canvas = document.getElementById('gameCanvas');
-            let ctx = canvas.getContext('2d');
-            let nextBlockCanvas = document.getElementById('nextBlockCanvas');
-            let nextBlockCtx = nextBlockCanvas.getContext('2d');
-            let score = 0;
-            let level = 1;
-            let gameOver = false;
-            let dropCounter = 0;
-            let dropInterval = 1000;
-            let lastTime = 0;
-            let board = createMatrix(COLS, ROWS);
-            let player = {
-                pos: {x: 0, y: 0},
-                matrix: null,
-                score: 0
+            // Create collectibles
+            collectibles = [];
+            for (let i = 0; i < 10; i++) {
+                collectibles.push({
+                    x: Math.random() * (canvas.width - 30),
+                    y: Math.random() * (canvas.height - 30),
+                    width: 15,
+                    height: 15,
+                    color: '#f1c40f',
+                    value: 50 + Math.floor(Math.random() * 100),
+                    collected: false
+                });
+            }
+        }
+        
+        // Create a new mission
+        function createMission(title, reward, targetX, targetY) {
+            currentMission = {
+                title: title,
+                description: "Go to the marked location",
+                reward: reward,
+                targetX: targetX,
+                targetY: targetY,
+                completed: false,
+                active: false
             };
             
-            // Scale canvas for high DPI displays
-            scaleCanvas(canvas, ctx);
-            scaleCanvas(nextBlockCanvas, nextBlockCtx);
-            
-            // Event listeners
-            document.addEventListener('keydown', handleKeyPress);
-            document.getElementById('restartBtn').addEventListener('click', resetGame);
-            
-            // Control buttons
-            const upBtn = document.getElementById('upBtn') || document.getElementById('upBtnMobile');
-            const leftBtn = document.getElementById('leftBtn') || document.getElementById('leftBtnMobile');
-            const downBtn = document.getElementById('downBtn') || document.getElementById('downBtnMobile');
-            const rightBtn = document.getElementById('rightBtn') || document.getElementById('rightBtnMobile');
-            
-            if (upBtn) upBtn.addEventListener('click', () => playerRotate(1));
-            if (leftBtn) leftBtn.addEventListener('click', () => playerMove(-1));
-            if (rightBtn) rightBtn.addEventListener('click', () => playerMove(1));
-            if (downBtn) downBtn.addEventListener('click', () => playerDrop());
-            
-            // Initialize game
-            resetGame();
-            updateScore();
-            
-            // Game loop
-            function update(time = 0) {
-                if (gameOver) return;
+            showMissionPopup();
+        }
+        
+        // Show mission popup
+        function showMissionPopup() {
+            document.getElementById('missionTitle').textContent = currentMission.title;
+            document.getElementById('missionDescription').textContent = currentMission.description;
+            document.getElementById('missionReward').textContent = `Reward: $${currentMission.reward}`;
+            document.getElementById('missionPopup').classList.remove('hidden');
+        }
+        
+        // Complete current mission
+        function completeMission() {
+            if (currentMission && currentMission.active && !currentMission.completed) {
+                money += currentMission.reward;
+                updateMoneyDisplay();
+                currentMission.completed = true;
                 
-                const deltaTime = time - lastTime;
-                lastTime = time;
-                
-                dropCounter += deltaTime;
-                if (dropCounter > dropInterval) {
-                    playerDrop();
-                }
-                
-                draw();
-                requestAnimationFrame(update);
+                // Create a new mission after a delay
+                setTimeout(() => {
+                    createMission(
+                        currentLanguage === 'en' ? "Deliver the package" : "توصيل الطرد",
+                        750 + Math.floor(Math.random() * 500),
+                        Math.random() * (canvas.width - 100),
+                        Math.random() * (canvas.height - 100)
+                    );
+                }, 3000);
             }
+        }
+        
+        // Update money display
+        function updateMoneyDisplay() {
+            document.getElementById('moneyDisplay').textContent = `$${money}`;
+        }
+        
+        // Update wanted level display
+        function updateWantedLevel() {
+            const wantedElement = document.getElementById('wantedLevel');
+            const stars = wantedElement.querySelectorAll('.wanted-star');
             
-            function draw() {
-                // Clear canvas
-                ctx.fillStyle = '#000';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (wantedLevel > 0) {
+                wantedElement.classList.remove('hidden');
                 
-                // Draw board
-                drawMatrix(board, {x: 0, y: 0}, ctx);
-                
-                // Draw player
-                drawMatrix(player.matrix, player.pos, ctx);
-            }
-            
-            function drawMatrix(matrix, offset, context) {
-                matrix.forEach((row, y) => {
-                    row.forEach((value, x) => {
-                        if (value !== 0) {
-                            context.fillStyle = COLORS[value];
-                            context.fillRect(
-                                (offset.x + x) * BLOCK_SIZE,
-                                (offset.y + y) * BLOCK_SIZE,
-                                BLOCK_SIZE,
-                                BLOCK_SIZE
-                            );
-                            
-                            // Add border to blocks
-                            context.strokeStyle = '#000';
-                            context.lineWidth = 2;
-                            context.strokeRect(
-                                (offset.x + x) * BLOCK_SIZE,
-                                (offset.y + y) * BLOCK_SIZE,
-                                BLOCK_SIZE,
-                                BLOCK_SIZE
-                            );
-                        }
-                    });
+                stars.forEach((star, index) => {
+                    if (index < wantedLevel) {
+                        star.classList.add('text-yellow-400');
+                        star.classList.remove('text-gray-400');
+                    } else {
+                        star.classList.remove('text-yellow-400');
+                        star.classList.add('text-gray-400');
+                    }
                 });
-            }
-            
-            function merge() {
-                player.matrix.forEach((row, y) => {
-                    row.forEach((value, x) => {
-                        if (value !== 0) {
-                            board[y + player.pos.y][x + player.pos.x] = value;
-                        }
-                    });
-                });
-            }
-            
-            function playerMove(dir) {
-                player.pos.x += dir;
-                if (collide()) {
-                    player.pos.x -= dir;
-                }
-            }
-            
-            function playerRotate(dir) {
-                const pos = player.pos.x;
-                let offset = 1;
-                rotate(player.matrix, dir);
                 
-                while (collide()) {
-                    player.pos.x += offset;
-                    offset = -(offset + (offset > 0 ? 1 : -1));
-                    if (offset > player.matrix[0].length) {
-                        rotate(player.matrix, -dir);
-                        player.pos.x = pos;
-                        return;
+                // Spawn police if wanted level is high enough
+                if (wantedLevel >= 3 && police.length < 3) {
+                    spawnPolice();
+                }
+            } else {
+                wantedElement.classList.add('hidden');
+            }
+        }
+        
+        // Spawn police
+        function spawnPolice() {
+            police.push({
+                x: Math.random() < 0.5 ? 0 : canvas.width,
+                y: Math.random() < 0.5 ? 0 : canvas.height,
+                width: 30,
+                height: 30,
+                color: '#3498db',
+                speed: 2 + Math.random() * 1,
+                direction: 'down'
+            });
+        }
+        
+        // Update language
+        function updateLanguage() {
+            const lang = translations[currentLanguage];
+            
+            // Update UI elements
+            document.getElementById('welcomeText').textContent = lang.welcome;
+            document.getElementById('instructionsText').textContent = lang.instructions;
+            document.getElementById('startGameBtn').textContent = lang.start;
+            document.getElementById('currentLanguage').textContent = lang.language;
+            
+            // Update pause menu
+            document.querySelector('#pauseMenu h1').textContent = lang.paused;
+            document.getElementById('resumeGameBtn').textContent = lang.resume;
+            document.getElementById('restartGameBtn').textContent = lang.restart;
+            document.getElementById('quitGameBtn').textContent = lang.quit;
+            
+            // Update mission popup if active
+            if (currentMission) {
+                document.getElementById('missionTitle').textContent = lang.missionTitle;
+                document.getElementById('missionDescription').textContent = lang.missionDesc;
+                document.getElementById('startMissionBtn').textContent = lang.accept;
+            }
+        }
+        
+        // Toggle language
+        function toggleLanguage() {
+            currentLanguage = currentLanguage === 'en' ? 'ar' : 'en';
+            updateLanguage();
+        }
+        
+        // Setup controls
+        function setupControls() {
+            // Keyboard controls
+            window.addEventListener('keydown', (e) => {
+                keysPressed[e.key] = true;
+                
+                // Pause game on ESC
+                if (e.key === 'Escape') {
+                    togglePause();
+                }
+            });
+            
+            window.addEventListener('keyup', (e) => {
+                keysPressed[e.key] = false;
+            });
+            
+            // Touch controls for joystick
+            const joystickArea = document.getElementById('joystickArea');
+            const joystick = document.getElementById('joystick');
+            
+            let touchId = null;
+            
+            joystickArea.addEventListener('touchstart', (e) => {
+                if (!touchId) {
+                    const touch = e.touches[0];
+                    touchId = touch.identifier;
+                    touchJoystick.active = true;
+                    updateJoystickPosition(touch.clientX, touch.clientY);
+                    e.preventDefault();
+                }
+            }, { passive: false });
+            
+            joystickArea.addEventListener('touchmove', (e) => {
+                for (let i = 0; i < e.touches.length; i++) {
+                    const touch = e.touches[i];
+                    if (touch.identifier === touchId) {
+                        updateJoystickPosition(touch.clientX, touch.clientY);
+                        e.preventDefault();
+                        break;
                     }
                 }
-            }
+            }, { passive: false });
             
-            function rotate(matrix, dir) {
-                for (let y = 0; y < matrix.length; ++y) {
-                    for (let x = 0; x < y; ++x) {
-                        [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+            joystickArea.addEventListener('touchend', (e) => {
+                for (let i = 0; i < e.changedTouches.length; i++) {
+                    const touch = e.changedTouches[i];
+                    if (touch.identifier === touchId) {
+                        resetJoystick();
+                        e.preventDefault();
+                        break;
                     }
                 }
-                
-                if (dir > 0) {
-                    matrix.forEach(row => row.reverse());
-                } else {
-                    matrix.reverse();
+            }, { passive: false });
+            
+            // Action button
+            document.getElementById('actionBtn').addEventListener('touchstart', () => {
+                player.isRunning = true;
+            });
+            
+            document.getElementById('actionBtn').addEventListener('touchend', () => {
+                player.isRunning = false;
+            });
+        }
+        
+        // Update joystick position
+        function updateJoystickPosition(touchX, touchY) {
+            const joystickArea = document.getElementById('joystickArea');
+            const joystick = document.getElementById('joystick');
+            
+            const rect = joystickArea.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            let dx = touchX - centerX;
+            let dy = touchY - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const maxDistance = rect.width / 2 - joystick.offsetWidth / 2;
+            
+            if (distance > maxDistance) {
+                dx = dx * maxDistance / distance;
+                dy = dy * maxDistance / distance;
+            }
+            
+            joystick.style.transform = `translate(${dx}px, ${dy}px)`;
+            
+            // Normalize direction vector
+            touchJoystick.dx = dx / maxDistance;
+            touchJoystick.dy = dy / maxDistance;
+        }
+        
+        // Reset joystick
+        function resetJoystick() {
+            const joystick = document.getElementById('joystick');
+            joystick.style.transform = 'translate(0, 0)';
+            touchJoystick.active = false;
+            touchJoystick.dx = 0;
+            touchJoystick.dy = 0;
+        }
+        
+        // Setup UI events
+        function setupUI() {
+            // Start game button
+            document.getElementById('startGameBtn').addEventListener('click', () => {
+                document.getElementById('startScreen').classList.add('hidden');
+                gameRunning = true;
+            });
+            
+            // Pause menu buttons
+            document.getElementById('resumeGameBtn').addEventListener('click', togglePause);
+            document.getElementById('restartGameBtn').addEventListener('click', restartGame);
+            document.getElementById('quitGameBtn').addEventListener('click', () => {
+                location.reload();
+            });
+            
+            // Mission accept button
+            document.getElementById('startMissionBtn').addEventListener('click', () => {
+                document.getElementById('missionPopup').classList.add('hidden');
+                if (currentMission) {
+                    currentMission.active = true;
                 }
-            }
+            });
             
-            function playerDrop() {
-                player.pos.y++;
-                if (collide()) {
-                    player.pos.y--;
-                    merge();
-                    playerReset();
-                    arenaSweep();
-                    updateScore();
-                }
-                dropCounter = 0;
-            }
-            
-            function collide() {
-                const [m, o] = [player.matrix, player.pos];
-                for (let y = 0; y < m.length; ++y) {
-                    for (let x = 0; x < m[y].length; ++x) {
-                        if (m[y][x] !== 0 &&
-                            (board[y + o.y] === undefined ||
-                             board[y + o.y][x + o.x] === undefined ||
-                             board[y + o.y][x + o.x] !== 0)) {
-                            return true;
-                        }
-                    }
-                }
-                return false;
-            }
-            
-            function playerReset() {
-                const pieces = 'ILJOTSZ';
-                const nextPiece = pieces[pieces.length * Math.random() | 0];
-                player.matrix = createPiece(nextPiece);
-                player.pos.y = 0;
-                player.pos.x = (board[0].length / 2 | 0) - (player.matrix[0].length / 2 | 0);
-                
-                // Draw next block preview
-                drawNextBlock(nextPiece);
-                
-                // Game over
-                if (collide()) {
-                    document.getElementById('finalScore').textContent = score;
-                    document.getElementById('gameOver').classList.remove('hidden');
-                    gameOver = true;
-                }
-            }
-            
-            function drawNextBlock(type) {
-                nextBlockCtx.fillStyle = '#000';
-                nextBlockCtx.fillRect(0, 0, nextBlockCanvas.width, nextBlockCanvas.height);
-                
-                const matrix = createPiece(type);
-                const offset = {
-                    x: (nextBlockCanvas.width / BLOCK_SIZE / 2) - (matrix[0].length / 2),
-                    y: (nextBlockCanvas.height / BLOCK_SIZE / 2) - (matrix.length / 2)
-                };
-                
-                drawMatrix(matrix, offset, nextBlockCtx);
-            }
-            
-            function arenaSweep() {
-                let rowCount = 0;
-                
-                outer: for (let y = board.length - 1; y >= 0; --y) {
-                    for (let x = 0; x < board[y].length; ++x) {
-                        if (board[y][x] === 0) {
-                            continue outer;
-                        }
-                    }
-                    
-                    // Mark row for flashing
-                    const row = document.createElement('div');
-                    row.className = 'flash-row';
-                    document.body.appendChild(row);
-                    setTimeout(() => row.remove(), 600);
-                    
-                    // Remove the row and add empty row at top
-                    const rowRemoved = board.splice(y, 1)[0].fill(0);
-                    board.unshift(rowRemoved);
-                    ++y;
-                    
-                    rowCount++;
-                }
-                
-                if (rowCount > 0) {
-                    // Update score based on rows cleared
-                    const points = [0, 40, 100, 300, 1200][rowCount] * level;
-                    score += points;
-                    
-                    // Level up every 10 rows (adjust as needed)
-                    const newLevel = Math.floor(score / 1000) + 1;
-                    if (newLevel > level) {
-                        level = newLevel;
-                        // Increase speed (reduce drop interval)
-                        dropInterval = Math.max(100, 1000 - (level * 100));
-                    }
-                }
-            }
-            
-            function updateScore() {
-                document.getElementById('score').textContent = score;
-                document.getElementById('level').textContent = level;
-            }
-            
-            function resetGame() {
-                board = createMatrix(COLS, ROWS);
-                score = 0;
-                level = 1;
-                dropInterval = 1000;
-                gameOver = false;
-                document.getElementById('gameOver').classList.add('hidden');
-                playerReset();
+            // Language toggle
+            document.getElementById('languageToggle').addEventListener('click', toggleLanguage);
+        }
+        
+        // Toggle pause
+        function togglePause() {
+            isPaused = !isPaused;
+            document.getElementById('pauseMenu').classList.toggle('hidden');
+        }
+        
+        // Restart game
+        function restartGame() {
+            location.reload();
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (!isPaused && gameRunning) {
                 update();
+                render();
             }
             
-            function handleKeyPress(e) {
-                if (gameOver) return;
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Update game state
+        function update() {
+            // Player movement
+            let moveX = 0;
+            let moveY = 0;
+            let speed = player.speed;
+            
+            if (player.isRunning) {
+                speed *= 1.5;
+            }
+            
+            // Keyboard controls
+            if (keysPressed['ArrowUp'] || keysPressed['w']) {
+                moveY = -speed;
+                player.direction = 'up';
+            }
+            if (keysPressed['ArrowDown'] || keysPressed['s']) {
+                moveY = speed;
+                player.direction = 'down';
+            }
+            if (keysPressed['ArrowLeft'] || keysPressed['a']) {
+                moveX = -speed;
+                player.direction = 'left';
+            }
+            if (keysPressed['ArrowRight'] || keysPressed['d']) {
+                moveX = speed;
+                player.direction = 'right';
+            }
+            
+            // Touch controls
+            if (touchJoystick.active) {
+                moveX = touchJoystick.dx * speed;
+                moveY = touchJoystick.dy * speed;
                 
-                switch(e.keyCode) {
-                    case 37: // Left arrow
-                        playerMove(-1);
-                        break;
-                    case 39: // Right arrow
-                        playerMove(1);
-                        break;
-                    case 40: // Down arrow
-                        playerDrop();
-                        break;
-                    case 38: // Up arrow
-                        playerRotate(1);
-                        break;
-                    case 32: // Space
-                        playerDrop();
-                        break;
+                // Update player direction based on movement
+                if (Math.abs(moveX) > Math.abs(moveY)) {
+                    player.direction = moveX > 0 ? 'right' : 'left';
+                } else if (moveY !== 0) {
+                    player.direction = moveY > 0 ? 'down' : 'up';
                 }
             }
             
-            // Helper functions
-            function createMatrix(w, h) {
-                const matrix = [];
-                while (h--) {
-                    matrix.push(new Array(w).fill(0));
-                }
-                return matrix;
+            // Normalize diagonal movement
+            if (moveX !== 0 && moveY !== 0) {
+                moveX *= 0.7071; // 1/sqrt(2)
+                moveY *= 0.7071;
             }
             
-            function createPiece(type) {
-                switch (type) {
-                    case 'I':
-                        return [
-                            [0, 0, 0, 0],
-                            [1, 1, 1, 1],
-                            [0, 0, 0, 0],
-                            [0, 0, 0, 0]
-                        ];
-                    case 'L':
-                        return [
-                            [0, 0, 0],
-                            [2, 2, 2],
-                            [2, 0, 0]
-                        ];
-                    case 'J':
-                        return [
-                            [0, 0, 0],
-                            [3, 3, 3],
-                            [0, 0, 3]
-                        ];
-                    case 'O':
-                        return [
-                            [4, 4],
-                            [4, 4]
-                        ];
-                    case 'T':
-                        return [
-                            [0, 0, 0],
-                            [5, 5, 5],
-                            [0, 5, 0]
-                        ];
-                    case 'S':
-                        return [
-                            [0, 0, 0],
-                            [0, 6, 6],
-                            [6, 6, 0]
-                        ];
-                    case 'Z':
-                        return [
-                            [0, 0, 0],
-                            [7, 7, 0],
-                            [0, 7, 7]
-                        ];
+            // Update player position with collision detection
+            const newX = player.x + moveX;
+            const newY = player.y + moveY;
+            
+            // Check boundaries
+            if (newX >= 0 && newX <= canvas.width - player.width) {
+                player.x = newX;
+            }
+            
+            if (newY >= 0 && newY <= canvas.height - player.height) {
+                player.y = newY;
+            }
+            
+            // Check collision with buildings
+            for (const building of buildings) {
+                if (
+                    player.x < building.x + building.width &&
+                    player.x + player.width > building.x &&
+                    player.y < building.y + building.height &&
+                    player.y + player.height > building.y
+                ) {
+                    // Collision detected, revert movement
+                    player.x -= moveX;
+                    player.y -= moveY;
+                    break;
                 }
             }
             
-            function scaleCanvas(canvas, context) {
-                const dpr = window.devicePixelRatio || 1;
-                const rect = canvas.getBoundingClientRect();
-                
-                canvas.width = rect.width * dpr;
-                canvas.height = rect.height * dpr;
-                
-                context.scale(dpr, dpr);
-                
-                canvas.style.width = `${rect.width}px`;
-                canvas.style.height = `${rect.height}px`;
+            // Check collision with collectibles
+            for (const collectible of collectibles) {
+                if (!collectible.collected &&
+                    player.x < collectible.x + collectible.width &&
+                    player.x + player.width > collectible.x &&
+                    player.y < collectible.y + collectible.height &&
+                    player.y + player.height > collectible.y
+                ) {
+                    collectible.collected = true;
+                    money += collectible.value;
+                    updateMoneyDisplay();
+                    
+                    // Random chance to increase wanted level when collecting
+                    if (Math.random() < 0.3) {
+                        wantedLevel = Math.min(wantedLevel + 1, 5);
+                        updateWantedLevel();
+                    }
+                }
             }
-        });
+            
+            // Check if player reached mission target
+            if (currentMission && currentMission.active && !currentMission.completed) {
+                const distance = Math.sqrt(
+                    Math.pow(player.x + player.width/2 - currentMission.targetX, 2) +
+                    Math.pow(player.y + player.height/2 - currentMission.targetY, 2)
+                );
+                
+                if (distance < 30) {
+                    completeMission();
+                }
+            }
+            
+            // Update police
+            for (let i = 0; i < police.length; i++) {
+                const cop = police[i];
+                
+                // Simple AI: move toward player
+                const angle = Math.atan2(player.y - cop.y, player.x - cop.x);
+                cop.x += Math.cos(angle) * cop.speed;
+                cop.y += Math.sin(angle) * cop.speed;
+                cop.direction = angle > -Math.PI/4 && angle < Math.PI/4 ? 'right' : 
+                                angle > Math.PI/4 && angle < 3*Math.PI/4 ? 'down' : 
+                                angle < -Math.PI/4 && angle > -3*Math.PI/4 ? 'up' : 'left';
+                
+                // Check collision with player
+                if (
+                    player.x < cop.x + cop.width &&
+                    player.x + player.width > cop.x &&
+                    player.y < cop.y + cop.height &&
+                    player.y + player.height > cop.y
+                ) {
+                    // Player caught by police
+                    wantedLevel = 0;
+                    updateWantedLevel();
+                    money = Math.max(0, money - 100);
+                    updateMoneyDisplay();
+                    police.splice(i, 1);
+                    i--;
+                }
+            }
+            
+            // Gradually decrease wanted level
+            if (wantedLevel > 0 && Math.random() < 0.01) {
+                wantedLevel--;
+                updateWantedLevel();
+            }
+        }
+        
+        // Render game
+        function render() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw roads
+            for (const road of roads) {
+                ctx.fillStyle = road.color;
+                ctx.fillRect(road.x, road.y, road.width, road.height);
+                
+                // Draw road markings
+                if (road.width > road.height) {
+                    // Horizontal road
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    const centerY = road.y + road.height / 2;
+                    for (let x = road.x + 20; x < road.x + road.width; x += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(x, centerY - 10);
+                        ctx.lineTo(x + 20, centerY - 10);
+                        ctx.moveTo(x, centerY + 10);
+                        ctx.lineTo(x + 20, centerY + 10);
+                        ctx.stroke();
+                    }
+                } else {
+                    // Vertical road
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 2;
+                    const centerX = road.x + road.width / 2;
+                    for (let y = road.y + 20; y < road.y + road.height; y += 40) {
+                        ctx.beginPath();
+                        ctx.moveTo(centerX - 10, y);
+                        ctx.lineTo(centerX - 10, y + 20);
+                        ctx.moveTo(centerX + 10, y);
+                        ctx.lineTo(centerX + 10, y + 20);
+                        ctx.stroke();
+                    }
+                }
+            }
+            
+            // Draw buildings
+            for (const building of buildings) {
+                ctx.fillStyle = building.color;
+                ctx.fillRect(building.x, building.y, building.width, building.height);
+                
+                // Draw windows
+                ctx.fillStyle = '#f1c40f';
+                const windowSize = 8;
+                const windowSpacing = 15;
+                
+                for (let y = building.y + 15; y < building.y + building.height - 15; y += windowSpacing) {
+                    for (let x = building.x + 15; x < building.x + building.width - 15; x += windowSpacing) {
+                        // Randomly turn off some windows
+                        if (Math.random() > 0.3) {
+                            ctx.fillRect(x, y, windowSize, windowSize);
+                        }
+                    }
+                }
+            }
+            
+            // Draw collectibles
+            for (const collectible of collectibles) {
+                if (!collectible.collected) {
+                    ctx.fillStyle = collectible.color;
+                    ctx.beginPath();
+                    ctx.arc(
+                        collectible.x + collectible.width / 2,
+                        collectible.y + collectible.height / 2,
+                        collectible.width / 2,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
+                    
+                    // Draw dollar sign
+                    ctx.fillStyle = '#000';
+                    ctx.font = 'bold 10px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(
+                        '$',
+                        collectible.x + collectible.width / 2,
+                        collectible.y + collectible.height / 2
+                    );
+                }
+            }
+            
+            // Draw mission target if active
+            if (currentMission && currentMission.active && !currentMission.completed) {
+                ctx.fillStyle = '#2ecc71';
+                ctx.beginPath();
+                ctx.arc(
+                    currentMission.targetX,
+                    currentMission.targetY,
+                    15,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.fill();
+                
+                // Draw pulsing effect
+                const pulseSize = 5 + Math.sin(Date.now() / 200) * 5;
+                ctx.strokeStyle = '#2ecc71';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.arc(
+                    currentMission.targetX,
+                    currentMission.targetY,
+                    15 + pulseSize,
+                    0,
+                    Math.PI * 2
+                );
+                ctx.stroke();
+            }
+            
+            // Draw police
+            for (const cop of police) {
+                // Draw cop body
+                ctx.fillStyle = cop.color;
+                ctx.fillRect(cop.x, cop.y, cop.width, cop.height);
+                
+                // Draw cop badge
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(cop.x + 5, cop.y + 5, cop.width - 10, 5);
+                ctx.fillRect(cop.x + 5, cop.y + 15, cop.width - 10, 5);
+                
+                // Draw cop head based on direction
+                ctx.fillStyle = '#ffe0bd';
+                if (cop.direction === 'up') {
+                    ctx.fillRect(cop.x + 10, cop.y - 5, 10, 5);
+                } else if (cop.direction === 'down') {
+                    ctx.fillRect(cop.x + 10, cop.y + cop.height, 10, 5);
+                } else if (cop.direction === 'left') {
+                    ctx.fillRect(cop.x - 5, cop.y + 10, 5, 10);
+                } else {
+                    ctx.fillRect(cop.x + cop.width, cop.y + 10, 5, 10);
+                }
+            }
+            
+            // Draw player
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            
+            // Draw player head based on direction
+            ctx.fillStyle = '#ffe0bd';
+            if (player.direction === 'up') {
+                ctx.fillRect(player.x + 10, player.y - 5, 10, 5);
+            } else if (player.direction === 'down') {
+                ctx.fillRect(player.x + 10, player.y + player.height, 10, 5);
+            } else if (player.direction === 'left') {
+                ctx.fillRect(player.x - 5, player.y + 10, 5, 10);
+            } else {
+                ctx.fillRect(player.x + player.width, player.y + 10, 5, 10);
+            }
+            
+            // Draw player name
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('Big Smoke', player.x + player.width / 2, player.y - 10);
+        }
+        
+        // Initialize the game when the page loads
+        window.addEventListener('load', initGame);
     </script>
 </body>
 </html>

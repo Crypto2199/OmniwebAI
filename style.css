@@ -1,0 +1,33 @@
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  text-align: center;
+  background: linear-gradient(to bottom, #fff200, #000);
+  color: #000;
+}
+canvas {
+  background: #222;
+  margin-top: 20px;
+  border: 5px solid #fff200;
+}
+#controls {
+  margin-top: 15px;
+}
+button {
+  padding: 10px 20px;
+  margin: 5px;
+  background: #fff200;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+}
+footer {
+  margin-top: 30px;
+  color: #fff;
+}
+#language-toggle {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+}

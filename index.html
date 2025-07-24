@@ -25,7 +25,7 @@
         }
         
         .dark {
-            background-color: #8B4513;
+            background-color: #F5DEB3;
         }
         
         .light {
@@ -116,7 +116,7 @@
 <body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
     <header class="w-full max-w-4xl mb-6 text-center">
         <h1 class="text-4xl md:text-5xl font-bold text-amber-800 mb-2">DAMMA</h1>
-        <p class="text-lg text-gray-700">The classic game of Draughts now available online!</p>
+        <p class="text-lg text-gray-700"></p>
     </header>
 
     <div class="flex flex-col md:flex-row items-center justify-center gap-8 w-full max-w-6xl">
@@ -218,9 +218,12 @@
                 <div class="mb-4">
                     <label class="block text-gray-700 mb-2">AI Difficulty</label>
                     <select id="ai-difficulty" class="w-full p-2 border rounded">
-                        <option value="easy">Easy</option>
-                        <option value="medium" selected>Medium</option>
-                        <option value="hard">Hard</option>
+    <option value="easy">Easy (Beginner)</option>
+    <option value="medium" selected>Medium (Intermediate)</option>
+    <option value="hard">Hard (Advanced)</option>
+    <option value="expert">Expert</option>
+    <option value="champion">Champion</option>
+    <option value="master">Master</option>
                     </select>
                 </div>
                 

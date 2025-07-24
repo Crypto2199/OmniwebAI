@@ -662,75 +662,86 @@
             
             // AI move logic
             function makeAIMove() {
-                if (state.gameOver) return;
+    if (state.gameOver) return;
+    
+    state.aiThinking = true;
+    updateUI();
+    
+    // تحديد وقت التفكير بناء على الصعوبة
+    const thinkTimes = {
+        'easy': 500,
+        'medium': 1000,
+        'hard': 1500,
+        'expert': 2000,
+        'champion': 2500,
+        'master': 3000
+    };
+    
+    const thinkTime = thinkTimes[state.aiDifficulty] || 1000;
+    
+    setTimeout(() => {
+        state.aiThinking = false;
+        
+        const allMoves = getAllValidMoves(state.currentPlayer);
+        
+        if (allMoves.length === 0) {
+            checkGameOver();
+            return;
+        }
+        
+        let chosenMove;
+        
+        switch(state.aiDifficulty) {
+            case 'easy':
+                // مستوى سهل: حركات عشوائية
+                chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+                break;
                 
-                state.aiThinking = true;
-                updateUI();
+            case 'medium':
+                // مستوى متوسط: يفضل القفزات ثم الترقية
+                chosenMove = getMediumAIMove(allMoves);
+                break;
                 
-                // Simulate thinking time based on difficulty
-                const thinkTime = state.aiDifficulty === 'easy' ? 500 : 
-                                  state.aiDifficulty === 'medium' ? 1000 : 1500;
+            case 'hard':
+                // مستوى صعب: استخدام خوارزمية بسيطة مع تقييم اللوحة
+                chosenMove = getHardAIMove(allMoves);
+                break;
                 
-                setTimeout(() => {
-                    state.aiThinking = false;
-                    
-                    // Get all possible moves for AI
-                    const allMoves = getAllValidMoves(state.currentPlayer);
-                    
-                    if (allMoves.length === 0) {
-                        // No moves available
-                        checkGameOver();
-                        return;
-                    }
-                    
-                    // Choose move based on difficulty
-                    let chosenMove;
-                    
-                    if (state.aiDifficulty === 'easy') {
-                        // Random move
-                        chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
-                    } else if (state.aiDifficulty === 'medium') {
-                        // Prefer captures, then prefer moves that promote to king
-                        const captures = allMoves.filter(move => move.type === 'capture');
-                        if (captures.length > 0) {
-                            chosenMove = captures[Math.floor(Math.random() * captures.length)];
-                        } else {
-                            // Find moves that promote to king
-                            const kingMoves = allMoves.filter(move => {
-                                const piece = state.board[move.fromRow][move.fromCol];
-                                return ((piece.player === 1 && move.row === 0) || 
-                                        (piece.player === 2 && move.row === 7)) && !piece.isKing;
-                            });
-                            
-                            if (kingMoves.length > 0) {
-                                chosenMove = kingMoves[Math.floor(Math.random() * kingMoves.length)];
-                            } else {
-                                chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
-                            }
-                        }
-                    } else {
-                        // Hard - use minimax algorithm with limited depth
-                        const result = minimax(state.board, 3, -Infinity, Infinity, true, state.currentPlayer);
-                        chosenMove = result.move;
-                    }
-                    
-                    // Make the chosen move
-                    if (chosenMove) {
-                        state.selectedPiece = { row: chosenMove.fromRow, col: chosenMove.fromCol };
-                        state.validMoves = [chosenMove];
-                        
-                        setTimeout(() => {
-                            makeMove(
-                                chosenMove.fromRow, 
-                                chosenMove.fromCol, 
-                                chosenMove.row, 
-                                chosenMove.col, 
-                                chosenMove.type === 'capture'
-                            );
-                        }, 300);
-                    }
-                }, thinkTime);
-            }
+            case 'expert':
+                // مستوى خبير: استخدام minimax بعمق 3
+                chosenMove = getExpertAIMove();
+                break;
+                
+            case 'champion':
+                // مستوى بطولة: استخدام minimax بعمق 5 مع تقييم متقدم
+                chosenMove = getChampionAIMove();
+                break;
+                
+            case 'master':
+                // مستوى سيد: استخدام minimax بعمق 7 مع تقييم متقدم للغاية
+                chosenMove = getMasterAIMove();
+                break;
+                
+            default:
+                chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+        }
+        
+        if (chosenMove) {
+            state.selectedPiece = { row: chosenMove.fromRow, col: chosenMove.fromCol };
+            state.validMoves = [chosenMove];
+            
+            setTimeout(() => {
+                makeMove(
+                    chosenMove.fromRow, 
+                    chosenMove.fromCol, 
+                    chosenMove.row, 
+                    chosenMove.col, 
+                    chosenMove.type === 'capture'
+                );
+            }, 300);
+        }
+    }, thinkTime);
+}
             
             // Minimax algorithm with alpha-beta pruning for hard AI
             function minimax(board, depth, alpha, beta, maximizingPlayer, currentPlayer) {

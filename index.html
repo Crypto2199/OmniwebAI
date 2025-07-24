@@ -1,0 +1,1149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DAMMA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: min(90vw, 90vh);
+            height: min(90vw, 90vh);
+            border: 2px solid #333;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .square {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .dark {
+            background-color: #8B4513;
+        }
+        
+        .light {
+            background-color: #F5DEB3;
+        }
+        
+        .piece {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 3px 5px rgba(0, 0, 0, 0.3);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .piece:hover {
+            transform: scale(1.1);
+        }
+        
+        .piece.selected {
+            box-shadow: 0 0 15px 5px rgba(255, 215, 0, 0.7);
+            transform: scale(1.1);
+        }
+        
+        .piece.king::after {
+            content: "♛";
+            position: absolute;
+            font-size: 50%;
+            color: rgba(255, 255, 255, 0.7);
+        }
+        
+        .possible-move {
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            background-color: rgba(0, 255, 0, 0.5);
+            border-radius: 50%;
+            z-index: 0;
+        }
+        
+        .capture-move {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 0, 0, 0.2);
+            border-radius: 50%;
+            z-index: 0;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .current-player {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .modal {
+            transition: all 0.3s ease;
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        .modal.show {
+            opacity: 1;
+            pointer-events: all;
+        }
+        
+        .thinking::after {
+            content: "...";
+            animation: dots 1.5s infinite;
+        }
+        
+        @keyframes dots {
+            0%, 20% { content: "."; }
+            40% { content: ".."; }
+            60%, 100% { content: "..."; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center justify-center p-4">
+    <header class="w-full max-w-4xl mb-6 text-center">
+        <h1 class="text-4xl md:text-5xl font-bold text-amber-800 mb-2">DAMMA</h1>
+        <p class="text-lg text-gray-700">The classic game of Draughts now available online!</p>
+    </header>
+
+    <div class="flex flex-col md:flex-row items-center justify-center gap-8 w-full max-w-6xl">
+        <div class="flex flex-col items-center">
+            <div class="mb-4 flex items-center justify-between w-full max-w-md">
+                <div id="player1" class="bg-white p-3 rounded-lg shadow-md flex items-center gap-3">
+                    <div class="piece bg-red-600 w-8 h-8"></div>
+                    <span class="font-medium">Player 1</span>
+                    <span id="p1-score" class="ml-2 font-bold">12</span>
+                </div>
+                
+                <div class="text-center px-4">
+                    <div id="current-turn" class="text-xl font-bold text-amber-700">Player 1's Turn</div>
+                    <button id="restart-btn" class="mt-2 px-4 py-1 bg-amber-600 text-white rounded hover:bg-amber-700 transition">
+                        <i class="fas fa-redo mr-1"></i> Restart
+                    </button>
+                </div>
+                
+                <div id="player2" class="bg-white p-3 rounded-lg shadow-md flex items-center gap-3">
+                    <div class="piece bg-black w-8 h-8"></div>
+                    <span class="font-medium">Player 2</span>
+                    <span id="p2-score" class="ml-2 font-bold">12</span>
+                </div>
+            </div>
+            
+            <div id="board" class="board"></div>
+            
+            <div class="mt-4 flex gap-4 flex-wrap justify-center">
+                <button id="rules-btn" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition">
+                    <i class="fas fa-info-circle mr-1"></i> Game Rules
+                </button>
+                <button id="ai-btn" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition">
+                    <i class="fas fa-robot mr-1"></i> Play vs AI
+                </button>
+                <button id="multiplayer-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
+                    <i class="fas fa-users mr-1"></i> Play Online
+                </button>
+            </div>
+        </div>
+        
+        <div class="w-full md:w-64 bg-white p-4 rounded-lg shadow-md mt-4 md:mt-0">
+            <h3 class="font-bold text-lg mb-3 text-center text-amber-800">Game History</h3>
+            <div id="game-history" class="space-y-2 max-h-96 overflow-y-auto">
+                <div class="text-sm p-2 bg-gray-100 rounded">Game started</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rules Modal -->
+    <div id="rules-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-amber-800">Checkers Rules</h2>
+                <button id="close-rules" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <h3 class="font-bold text-lg">Basic Movement</h3>
+                    <p>Regular pieces move diagonally forward one square. Kings can move diagonally forward or backward.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-bold text-lg">Capturing</h3>
+                    <p>If an opponent's piece is adjacent and the square immediately beyond it is empty, you must jump over the opponent's piece and capture it.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-bold text-lg">Kinging</h3>
+                    <p>When a piece reaches the farthest row (the "king row"), it becomes a king and can move both forward and backward.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-bold text-lg">Multiple Captures</h3>
+                    <p>If after a capture another capture is available with the same piece, you must continue capturing.</p>
+                </div>
+                
+                <div>
+                    <h3 class="font-bold text-lg">Winning</h3>
+                    <p>The game is won when the opponent has no pieces left or cannot make a legal move.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- AI Modal -->
+    <div id="ai-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-amber-800">Play Against AI</h2>
+                <button id="close-ai" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">AI Difficulty</label>
+                    <select id="ai-difficulty" class="w-full p-2 border rounded">
+                        <option value="easy">Easy</option>
+                        <option value="medium" selected>Medium</option>
+                        <option value="hard">Hard</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Play As</label>
+                    <div class="flex gap-4">
+                        <label class="flex items-center">
+                            <input type="radio" name="player-side" value="1" checked class="mr-2">
+                            <div class="piece bg-red-600 w-6 h-6"></div>
+                            <span class="ml-1">Player 1 (Red)</span>
+                        </label>
+                        <label class="flex items-center">
+                            <input type="radio" name="player-side" value="2" class="mr-2">
+                            <div class="piece bg-black w-6 h-6"></div>
+                            <span class="ml-1">Player 2 (Black)</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="flex justify-center gap-4">
+                    <button id="start-ai-game" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
+                        Start Game
+                    </button>
+                    <button id="cancel-ai" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Multiplayer Modal -->
+    <div id="multiplayer-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-amber-800">Play Online</h2>
+                <button id="close-multiplayer" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="text-center py-8">
+                    <i class="fas fa-plug text-4xl text-gray-400 mb-4"></i>
+                    <p class="text-gray-600">Online multiplayer coming soon!</p>
+                    <p class="text-sm text-gray-500 mt-2">For now, enjoy playing against a friend on the same device or try our AI opponent.</p>
+                </div>
+                
+                <div class="flex justify-center">
+                    <button id="close-multiplayer-btn" class="px-4 py-2 bg-amber-600 text-white rounded hover:bg-amber-700 transition">
+                        OK
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="game-over-modal" class="modal fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full text-center">
+            <h2 id="game-over-title" class="text-2xl font-bold text-amber-800 mb-4">Game Over</h2>
+            <p id="game-over-message" class="text-lg mb-6">Player 1 wins!</p>
+            <div class="flex justify-center gap-4">
+                <button id="new-game-btn" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition">
+                    New Game
+                </button>
+                <button id="close-game-over" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 transition">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="mt-8 text-center text-gray-600 text-sm">
+        <p>© 2025 DAMMA - Play the classic Draughts game online</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game state
+            const state = {
+                board: Array(8).fill().map(() => Array(8).fill(null)),
+                currentPlayer: 1, // 1 for player 1 (red), 2 for player 2 (black)
+                selectedPiece: null,
+                validMoves: [],
+                gameOver: false,
+                p1Score: 12,
+                p2Score: 12,
+                history: [],
+                vsAI: false,
+                aiDifficulty: 'medium',
+                playerSide: 1,
+                aiThinking: false
+            };
+
+            // DOM elements
+            const boardElement = document.getElementById('board');
+            const currentTurnElement = document.getElementById('current-turn');
+            const p1ScoreElement = document.getElementById('p1-score');
+            const p2ScoreElement = document.getElementById('p2-score');
+            const gameHistoryElement = document.getElementById('game-history');
+            const player1Element = document.getElementById('player1');
+            const player2Element = document.getElementById('player2');
+            
+            // Modal elements
+            const rulesModal = document.getElementById('rules-modal');
+            const aiModal = document.getElementById('ai-modal');
+            const multiplayerModal = document.getElementById('multiplayer-modal');
+            const gameOverModal = document.getElementById('game-over-modal');
+            const closeRulesBtn = document.getElementById('close-rules');
+            const closeAiBtn = document.getElementById('close-ai');
+            const cancelAiBtn = document.getElementById('cancel-ai');
+            const closeMultiplayerBtn = document.getElementById('close-multiplayer');
+            const closeMultiplayerBtn2 = document.getElementById('close-multiplayer-btn');
+            const closeGameOverBtn = document.getElementById('close-game-over');
+            const rulesBtn = document.getElementById('rules-btn');
+            const aiBtn = document.getElementById('ai-btn');
+            const multiplayerBtn = document.getElementById('multiplayer-btn');
+            const restartBtn = document.getElementById('restart-btn');
+            const newGameBtn = document.getElementById('new-game-btn');
+            const startAiGameBtn = document.getElementById('start-ai-game');
+            const aiDifficultySelect = document.getElementById('ai-difficulty');
+            const playerSideRadios = document.querySelectorAll('input[name="player-side"]');
+
+            // Initialize the game
+            function initGame() {
+                state.board = Array(8).fill().map(() => Array(8).fill(null));
+                state.currentPlayer = 1;
+                state.selectedPiece = null;
+                state.validMoves = [];
+                state.gameOver = false;
+                state.p1Score = 12;
+                state.p2Score = 12;
+                state.history = [];
+                state.aiThinking = false;
+                
+                // Set up initial board
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        if ((row + col) % 2 === 1) {
+                            if (row < 3) {
+                                state.board[row][col] = { player: 2, isKing: false };
+                            } else if (row > 4) {
+                                state.board[row][col] = { player: 1, isKing: false };
+                            }
+                        }
+                    }
+                }
+                
+                updateUI();
+                addToHistory("Game started");
+                
+                // If playing vs AI and AI goes first
+                if (state.vsAI && state.currentPlayer !== state.playerSide) {
+                    setTimeout(() => makeAIMove(), 500);
+                }
+            }
+
+            // Update UI based on game state
+            function updateUI() {
+                // Clear the board
+                boardElement.innerHTML = '';
+                
+                // Update scores
+                p1ScoreElement.textContent = state.p1Score;
+                p2ScoreElement.textContent = state.p2Score;
+                
+                // Update current player highlight
+                if (state.currentPlayer === 1) {
+                    player1Element.classList.add('current-player');
+                    player2Element.classList.remove('current-player');
+                    currentTurnElement.textContent = state.vsAI && state.playerSide === 1 ? 
+                        "Your Turn" : "Player 1's Turn";
+                } else {
+                    player1Element.classList.remove('current-player');
+                    player2Element.classList.add('current-player');
+                    currentTurnElement.textContent = state.vsAI && state.playerSide === 2 ? 
+                        "Your Turn" : "Player 2's Turn";
+                }
+                
+                // Show AI thinking indicator
+                if (state.aiThinking) {
+                    currentTurnElement.classList.add('thinking');
+                    currentTurnElement.textContent = state.vsAI ? 
+                        "AI is thinking" : "Player 2 is thinking";
+                } else {
+                    currentTurnElement.classList.remove('thinking');
+                }
+                
+                // Render the board
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const square = document.createElement('div');
+                        square.className = `square ${(row + col) % 2 === 0 ? 'light' : 'dark'}`;
+                        square.dataset.row = row;
+                        square.dataset.col = col;
+                        
+                        // Add click event to squares
+                        square.addEventListener('click', () => handleSquareClick(row, col));
+                        
+                        // Add pieces
+                        const piece = state.board[row][col];
+                        if (piece) {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = `piece ${piece.player === 1 ? 'bg-red-600' : 'bg-black'} ${piece.isKing ? 'king' : ''}`;
+                            
+                            // Highlight selected piece
+                            if (state.selectedPiece && state.selectedPiece.row === row && state.selectedPiece.col === col) {
+                                pieceElement.classList.add('selected');
+                            }
+                            
+                            square.appendChild(pieceElement);
+                        }
+                        
+                        // Highlight valid moves
+                        if (state.validMoves.some(move => move.row === row && move.col === col)) {
+                            const moveType = state.validMoves.find(move => move.row === row && move.col === col).type;
+                            const moveMarker = document.createElement('div');
+                            moveMarker.className = moveType === 'capture' ? 'capture-move' : 'possible-move';
+                            square.appendChild(moveMarker);
+                        }
+                        
+                        boardElement.appendChild(square);
+                    }
+                }
+            }
+
+            // Handle square clicks
+            function handleSquareClick(row, col) {
+                if (state.gameOver || state.aiThinking) return;
+                
+                // If playing vs AI, only allow moves for the human player
+                if (state.vsAI && state.currentPlayer !== state.playerSide) return;
+                
+                const piece = state.board[row][col];
+                
+                // If a piece of the current player is clicked, select it
+                if (piece && piece.player === state.currentPlayer) {
+                    state.selectedPiece = { row, col };
+                    state.validMoves = getValidMoves(row, col);
+                    updateUI();
+                    return;
+                }
+                
+                // If a square is clicked with a selected piece, try to move
+                if (state.selectedPiece) {
+                    const move = state.validMoves.find(m => m.row === row && m.col === col);
+                    if (move) {
+                        makeMove(state.selectedPiece.row, state.selectedPiece.col, row, col, move.type === 'capture');
+                    } else {
+                        // Deselect if invalid move
+                        state.selectedPiece = null;
+                        state.validMoves = [];
+                        updateUI();
+                    }
+                }
+            }
+
+            // Get all valid moves for a piece
+            function getValidMoves(row, col) {
+                const piece = state.board[row][col];
+                if (!piece) return [];
+                
+                const moves = [];
+                const directions = piece.isKing ? 
+                    [[-1, -1], [-1, 1], [1, -1], [1, 1]] : 
+                    (piece.player === 1 ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]]);
+                
+                // Check for captures first (mandatory capture rule)
+                let hasCaptures = false;
+                
+                for (const [dr, dc] of directions) {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    
+                    if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                        const targetPiece = state.board[newRow][newCol];
+                        
+                        if (targetPiece && targetPiece.player !== piece.player) {
+                            // Check if we can jump over the opponent's piece
+                            const jumpRow = newRow + dr;
+                            const jumpCol = newCol + dc;
+                            
+                            if (jumpRow >= 0 && jumpRow < 8 && jumpCol >= 0 && jumpCol < 8 && !state.board[jumpRow][jumpCol]) {
+                                moves.push({ 
+                                    row: jumpRow, 
+                                    col: jumpCol, 
+                                    type: 'capture', 
+                                    captured: { row: newRow, col: newCol },
+                                    direction: [dr, dc]
+                                });
+                                hasCaptures = true;
+                            }
+                        }
+                    }
+                }
+                
+                // If there are captures, check for multi-captures
+                if (hasCaptures) {
+                    // For each capture, check if the piece can capture again from the new position
+                    const multiCaptures = [];
+                    
+                    for (const move of moves) {
+                        const tempBoard = JSON.parse(JSON.stringify(state.board));
+                        const tempPiece = {...piece};
+                        
+                        // Simulate the move
+                        tempBoard[row][col] = null;
+                        tempBoard[move.row][move.col] = tempPiece;
+                        tempBoard[move.captured.row][move.captured.col] = null;
+                        
+                        // Check for additional captures from the new position
+                        const additionalMoves = getValidMovesForPosition(move.row, move.col, tempBoard, tempPiece);
+                        
+                        if (additionalMoves.some(m => m.type === 'capture')) {
+                            // Add the additional captures to the move
+                            move.additionalCaptures = additionalMoves.filter(m => m.type === 'capture');
+                        }
+                    }
+                    
+                    return moves;
+                }
+                
+                // Regular moves
+                for (const [dr, dc] of directions) {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    
+                    if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8 && !state.board[newRow][newCol]) {
+                        moves.push({ row: newRow, col: newCol, type: 'move' });
+                    }
+                }
+                
+                return moves;
+            }
+            
+            // Helper function to get valid moves for a position on a given board state
+            function getValidMovesForPosition(row, col, board, piece) {
+                const moves = [];
+                const directions = piece.isKing ? 
+                    [[-1, -1], [-1, 1], [1, -1], [1, 1]] : 
+                    (piece.player === 1 ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]]);
+                
+                // Check for captures only
+                for (const [dr, dc] of directions) {
+                    const newRow = row + dr;
+                    const newCol = col + dc;
+                    
+                    if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                        const targetPiece = board[newRow][newCol];
+                        
+                        if (targetPiece && targetPiece.player !== piece.player) {
+                            // Check if we can jump over the opponent's piece
+                            const jumpRow = newRow + dr;
+                            const jumpCol = newCol + dc;
+                            
+                            if (jumpRow >= 0 && jumpRow < 8 && jumpCol >= 0 && jumpCol < 8 && !board[jumpRow][jumpCol]) {
+                                moves.push({ 
+                                    row: jumpRow, 
+                                    col: jumpCol, 
+                                    type: 'capture', 
+                                    captured: { row: newRow, col: newCol },
+                                    direction: [dr, dc]
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                return moves;
+            }
+
+            // Make a move
+            function makeMove(fromRow, fromCol, toRow, toCol, isCapture) {
+                const piece = state.board[fromRow][fromCol];
+                let moveDescription = `Player ${piece.player} moved from ${String.fromCharCode(97 + fromCol)}${8 - fromRow} to ${String.fromCharCode(97 + toCol)}${8 - toRow}`;
+                
+                // Move the piece
+                state.board[toRow][toCol] = {...piece};
+                state.board[fromRow][fromCol] = null;
+                
+                // Handle capture
+                if (isCapture) {
+                    const move = state.validMoves.find(m => m.row === toRow && m.col === toCol);
+                    if (move && move.captured) {
+                        state.board[move.captured.row][move.captured.col] = null;
+                        
+                        // Update scores
+                        if (piece.player === 1) {
+                            state.p2Score--;
+                        } else {
+                            state.p1Score--;
+                        }
+                        
+                        moveDescription += `, captured at ${String.fromCharCode(97 + move.captured.col)}${8 - move.captured.row}`;
+                    }
+                }
+                
+                // Check for promotion to king
+                if (!piece.isKing && ((piece.player === 1 && toRow === 0) || (piece.player === 2 && toRow === 7))) {
+                    state.board[toRow][toCol].isKing = true;
+                    moveDescription += " and was crowned a king!";
+                }
+                
+                addToHistory(moveDescription);
+                
+                // Check for multi-capture
+                if (isCapture) {
+                    const move = state.validMoves.find(m => m.row === toRow && m.col === toCol);
+                    if (move && move.additionalCaptures && move.additionalCaptures.length > 0) {
+                        // The same piece must continue capturing
+                        state.selectedPiece = { row: toRow, col: toCol };
+                        state.validMoves = move.additionalCaptures;
+                        updateUI();
+                        return;
+                    }
+                }
+                
+                // Check for game over
+                checkGameOver();
+                
+                if (!state.gameOver) {
+                    // Switch player
+                    state.currentPlayer = state.currentPlayer === 1 ? 2 : 1;
+                    state.selectedPiece = null;
+                    state.validMoves = [];
+                    
+                    updateUI();
+                    
+                    // If playing vs AI, let AI make a move
+                    if (state.vsAI && state.currentPlayer !== state.playerSide) {
+                        setTimeout(() => makeAIMove(), 500);
+                    }
+                }
+            }
+            
+            // AI move logic
+            function makeAIMove() {
+                if (state.gameOver) return;
+                
+                state.aiThinking = true;
+                updateUI();
+                
+                // Simulate thinking time based on difficulty
+                const thinkTime = state.aiDifficulty === 'easy' ? 500 : 
+                                  state.aiDifficulty === 'medium' ? 1000 : 1500;
+                
+                setTimeout(() => {
+                    state.aiThinking = false;
+                    
+                    // Get all possible moves for AI
+                    const allMoves = getAllValidMoves(state.currentPlayer);
+                    
+                    if (allMoves.length === 0) {
+                        // No moves available
+                        checkGameOver();
+                        return;
+                    }
+                    
+                    // Choose move based on difficulty
+                    let chosenMove;
+                    
+                    if (state.aiDifficulty === 'easy') {
+                        // Random move
+                        chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+                    } else if (state.aiDifficulty === 'medium') {
+                        // Prefer captures, then prefer moves that promote to king
+                        const captures = allMoves.filter(move => move.type === 'capture');
+                        if (captures.length > 0) {
+                            chosenMove = captures[Math.floor(Math.random() * captures.length)];
+                        } else {
+                            // Find moves that promote to king
+                            const kingMoves = allMoves.filter(move => {
+                                const piece = state.board[move.fromRow][move.fromCol];
+                                return ((piece.player === 1 && move.row === 0) || 
+                                        (piece.player === 2 && move.row === 7)) && !piece.isKing;
+                            });
+                            
+                            if (kingMoves.length > 0) {
+                                chosenMove = kingMoves[Math.floor(Math.random() * kingMoves.length)];
+                            } else {
+                                chosenMove = allMoves[Math.floor(Math.random() * allMoves.length)];
+                            }
+                        }
+                    } else {
+                        // Hard - use minimax algorithm with limited depth
+                        const result = minimax(state.board, 3, -Infinity, Infinity, true, state.currentPlayer);
+                        chosenMove = result.move;
+                    }
+                    
+                    // Make the chosen move
+                    if (chosenMove) {
+                        state.selectedPiece = { row: chosenMove.fromRow, col: chosenMove.fromCol };
+                        state.validMoves = [chosenMove];
+                        
+                        setTimeout(() => {
+                            makeMove(
+                                chosenMove.fromRow, 
+                                chosenMove.fromCol, 
+                                chosenMove.row, 
+                                chosenMove.col, 
+                                chosenMove.type === 'capture'
+                            );
+                        }, 300);
+                    }
+                }, thinkTime);
+            }
+            
+            // Minimax algorithm with alpha-beta pruning for hard AI
+            function minimax(board, depth, alpha, beta, maximizingPlayer, currentPlayer) {
+                // Base case: terminal node or depth limit reached
+                if (depth === 0 || isTerminalNode(board, currentPlayer)) {
+                    return { score: evaluateBoard(board, state.playerSide === 2 ? 1 : 2) };
+                }
+                
+                const allMoves = getAllValidMovesForBoard(board, currentPlayer);
+                
+                if (maximizingPlayer) {
+                    let maxEval = -Infinity;
+                    let bestMove = null;
+                    
+                    for (const move of allMoves) {
+                        // Make a copy of the board and simulate the move
+                        const newBoard = JSON.parse(JSON.stringify(board));
+                        const piece = {...newBoard[move.fromRow][move.fromCol]};
+                        
+                        // Execute the move
+                        newBoard[move.fromRow][move.fromCol] = null;
+                        newBoard[move.row][move.col] = piece;
+                        
+                        // Handle capture
+                        if (move.type === 'capture') {
+                            newBoard[move.captured.row][move.captured.col] = null;
+                        }
+                        
+                        // Handle promotion to king
+                        if (!piece.isKing && ((piece.player === 1 && move.row === 0) || (piece.player === 2 && move.row === 7))) {
+                            piece.isKing = true;
+                            newBoard[move.row][move.col] = piece;
+                        }
+                        
+                        // Check for multi-capture
+                        let nextPlayer = currentPlayer;
+                        if (move.type === 'capture' && move.additionalCaptures && move.additionalCaptures.length > 0) {
+                            // Continue with the same player
+                            const result = minimax(newBoard, depth, alpha, beta, true, currentPlayer);
+                            
+                            if (result.score > maxEval) {
+                                maxEval = result.score;
+                                bestMove = move;
+                            }
+                        } else {
+                            // Switch player
+                            nextPlayer = currentPlayer === 1 ? 2 : 1;
+                            const result = minimax(newBoard, depth - 1, alpha, beta, false, nextPlayer);
+                            
+                            if (result.score > maxEval) {
+                                maxEval = result.score;
+                                bestMove = move;
+                            }
+                        }
+                        
+                        alpha = Math.max(alpha, maxEval);
+                        if (beta <= alpha) {
+                            break; // Beta cutoff
+                        }
+                    }
+                    
+                    return { score: maxEval, move: bestMove };
+                } else {
+                    let minEval = Infinity;
+                    let bestMove = null;
+                    
+                    for (const move of allMoves) {
+                        // Make a copy of the board and simulate the move
+                        const newBoard = JSON.parse(JSON.stringify(board));
+                        const piece = {...newBoard[move.fromRow][move.fromCol]};
+                        
+                        // Execute the move
+                        newBoard[move.fromRow][move.fromCol] = null;
+                        newBoard[move.row][move.col] = piece;
+                        
+                        // Handle capture
+                        if (move.type === 'capture') {
+                            newBoard[move.captured.row][move.captured.col] = null;
+                        }
+                        
+                        // Handle promotion to king
+                        if (!piece.isKing && ((piece.player === 1 && move.row === 0) || (piece.player === 2 && move.row === 7))) {
+                            piece.isKing = true;
+                            newBoard[move.row][move.col] = piece;
+                        }
+                        
+                        // Check for multi-capture
+                        let nextPlayer = currentPlayer;
+                        if (move.type === 'capture' && move.additionalCaptures && move.additionalCaptures.length > 0) {
+                            // Continue with the same player
+                            const result = minimax(newBoard, depth, alpha, beta, false, currentPlayer);
+                            
+                            if (result.score < minEval) {
+                                minEval = result.score;
+                                bestMove = move;
+                            }
+                        } else {
+                            // Switch player
+                            nextPlayer = currentPlayer === 1 ? 2 : 1;
+                            const result = minimax(newBoard, depth - 1, alpha, beta, true, nextPlayer);
+                            
+                            if (result.score < minEval) {
+                                minEval = result.score;
+                                bestMove = move;
+                            }
+                        }
+                        
+                        beta = Math.min(beta, minEval);
+                        if (beta <= alpha) {
+                            break; // Alpha cutoff
+                        }
+                    }
+                    
+                    return { score: minEval, move: bestMove };
+                }
+            }
+            
+            // Evaluate the board for AI
+            function evaluateBoard(board, aiPlayer) {
+                let score = 0;
+                
+                // Material score
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = board[row][col];
+                        if (piece) {
+                            const value = piece.isKing ? 3 : 1;
+                            if (piece.player === aiPlayer) {
+                                score += value;
+                                
+                                // Position bonus for regular pieces
+                                if (!piece.isKing) {
+                                    if (aiPlayer === 1) {
+                                        // Red pieces - bonus for moving up (lower row numbers)
+                                        score += (7 - row) * 0.1;
+                                    } else {
+                                        // Black pieces - bonus for moving down (higher row numbers)
+                                        score += row * 0.1;
+                                    }
+                                }
+                            } else {
+                                score -= value;
+                                
+                                // Position malus for opponent's regular pieces
+                                if (!piece.isKing) {
+                                    if (aiPlayer === 1) {
+                                        // Opponent is black - malus for moving down
+                                        score += row * 0.1;
+                                    } else {
+                                        // Opponent is red - malus for moving up
+                                        score += (7 - row) * 0.1;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Bonus for kings in center
+                const centerSquares = [
+                    [3, 3], [3, 4], [4, 3], [4, 4]
+                ];
+                
+                for (const [row, col] of centerSquares) {
+                    const piece = board[row][col];
+                    if (piece && piece.isKing && piece.player === aiPlayer) {
+                        score += 0.5;
+                    }
+                }
+                
+                return score;
+            }
+            
+            // Check if the node is terminal (game over)
+            function isTerminalNode(board, currentPlayer) {
+                // Check if current player has no pieces
+                let hasPieces = false;
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = board[row][col];
+                        if (piece && piece.player === currentPlayer) {
+                            hasPieces = true;
+                            break;
+                        }
+                    }
+                    if (hasPieces) break;
+                }
+                
+                if (!hasPieces) return true;
+                
+                // Check if current player has no valid moves
+                return getAllValidMovesForBoard(board, currentPlayer).length === 0;
+            }
+            
+            // Get all valid moves for a player on the current board
+            function getAllValidMoves(player) {
+                const moves = [];
+                
+                // First, check for any captures (mandatory capture rule)
+                let hasCaptures = false;
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = state.board[row][col];
+                        if (piece && piece.player === player) {
+                            const pieceMoves = getValidMoves(row, col);
+                            const captures = pieceMoves.filter(move => move.type === 'capture');
+                            
+                            if (captures.length > 0) {
+                                hasCaptures = true;
+                                captures.forEach(move => {
+                                    moves.push({
+                                        fromRow: row,
+                                        fromCol: col,
+                                        ...move
+                                    });
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                if (hasCaptures) return moves;
+                
+                // If no captures, get all regular moves
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = state.board[row][col];
+                        if (piece && piece.player === player) {
+                            const pieceMoves = getValidMoves(row, col);
+                            pieceMoves.forEach(move => {
+                                moves.push({
+                                    fromRow: row,
+                                    fromCol: col,
+                                    ...move
+                                });
+                            });
+                        }
+                    }
+                }
+                
+                return moves;
+            }
+            
+            // Get all valid moves for a player on a given board state
+            function getAllValidMovesForBoard(board, player) {
+                const moves = [];
+                
+                // First, check for any captures (mandatory capture rule)
+                let hasCaptures = false;
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = board[row][col];
+                        if (piece && piece.player === player) {
+                            const pieceMoves = getValidMovesForPosition(row, col, board, piece);
+                            const captures = pieceMoves.filter(move => move.type === 'capture');
+                            
+                            if (captures.length > 0) {
+                                hasCaptures = true;
+                                captures.forEach(move => {
+                                    moves.push({
+                                        fromRow: row,
+                                        fromCol: col,
+                                        ...move
+                                    });
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                if (hasCaptures) return moves;
+                
+                // If no captures, get all regular moves
+                const directions = [[-1, -1], [-1, 1], [1, -1], [1, 1]];
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = board[row][col];
+                        if (piece && piece.player === player) {
+                            const pieceDirections = piece.isKing ? 
+                                directions : 
+                                (piece.player === 1 ? [[-1, -1], [-1, 1]] : [[1, -1], [1, 1]]);
+                            
+                            for (const [dr, dc] of pieceDirections) {
+                                const newRow = row + dr;
+                                const newCol = col + dc;
+                                
+                                if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8 && !board[newRow][newCol]) {
+                                    moves.push({
+                                        fromRow: row,
+                                        fromCol: col,
+                                        row: newRow,
+                                        col: newCol,
+                                        type: 'move'
+                                    });
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                return moves;
+            }
+
+            // Check if the game is over
+            function checkGameOver() {
+                // Check if a player has no pieces left
+                let p1Pieces = 0;
+                let p2Pieces = 0;
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const piece = state.board[row][col];
+                        if (piece) {
+                            if (piece.player === 1) p1Pieces++;
+                            else p2Pieces++;
+                        }
+                    }
+                }
+                
+                if (p1Pieces === 0) {
+                    endGame(2);
+                    return;
+                }
+                
+                if (p2Pieces === 0) {
+                    endGame(1);
+                    return;
+                }
+                
+                // Check if current player has no valid moves
+                const currentPlayerMoves = getAllValidMoves(state.currentPlayer);
+                if (currentPlayerMoves.length === 0) {
+                    endGame(state.currentPlayer === 1 ? 2 : 1);
+                    return;
+                }
+            }
+            
+            // End the game
+            function endGame(winner) {
+                state.gameOver = true;
+                state.selectedPiece = null;
+                state.validMoves = [];
+                
+                const winnerText = state.vsAI ? 
+                    (winner === state.playerSide ? "You win!" : "AI wins!") : 
+                    `Player ${winner} wins!`;
+                
+                addToHistory(`Game over - ${winnerText}`);
+                
+                document.getElementById('game-over-title').textContent = "Game Over";
+                document.getElementById('game-over-message').textContent = winnerText;
+                
+                showModal(gameOverModal);
+                updateUI();
+            }
+            
+            // Add message to game history
+            function addToHistory(message) {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString();
+                const entry = document.createElement('div');
+                entry.className = 'text-sm p-2 bg-gray-100 rounded';
+                entry.textContent = `[${timeString}] ${message}`;
+                gameHistoryElement.appendChild(entry);
+                gameHistoryElement.scrollTop = gameHistoryElement.scrollHeight;
+                
+                // Add to state history
+                state.history.push(message);
+            }
+            
+            // Show modal
+            function showModal(modal) {
+                modal.classList.add('show');
+                modal.classList.remove('hide');
+            }
+            
+            // Hide modal
+            function hideModal(modal) {
+                modal.classList.add('hide');
+                modal.classList.remove('show');
+            }
+
+            // Event listeners
+            rulesBtn.addEventListener('click', () => showModal(rulesModal));
+            closeRulesBtn.addEventListener('click', () => hideModal(rulesModal));
+            
+            aiBtn.addEventListener('click', () => showModal(aiModal));
+            closeAiBtn.addEventListener('click', () => hideModal(aiModal));
+            cancelAiBtn.addEventListener('click', () => hideModal(aiModal));
+            
+            multiplayerBtn.addEventListener('click', () => showModal(multiplayerModal));
+            closeMultiplayerBtn.addEventListener('click', () => hideModal(multiplayerModal));
+            closeMultiplayerBtn2.addEventListener('click', () => hideModal(multiplayerModal));
+            
+            closeGameOverBtn.addEventListener('click', () => hideModal(gameOverModal));
+            
+            restartBtn.addEventListener('click', initGame);
+            newGameBtn.addEventListener('click', () => {
+                hideModal(gameOverModal);
+                initGame();
+            });
+            
+            startAiGameBtn.addEventListener('click', () => {
+                state.vsAI = true;
+                state.aiDifficulty = aiDifficultySelect.value;
+                state.playerSide = parseInt(document.querySelector('input[name="player-side"]:checked').value);
+                hideModal(aiModal);
+                initGame();
+            });
+            
+            // Initialize the game
+            initGame();
+        });
+    </script>
+</body>
+</html>

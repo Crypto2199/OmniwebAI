@@ -1,25 +1,464 @@
-
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>OmniAI - دردشة ذكاء اصطناعي</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quick Checkers - Play Draughts Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .board {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 600px;
+            max-height: 600px;
+            border: 2px solid #333;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cell {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .piece {
+            width: 80%;
+            height: 80%;
+            border-radius: 50%;
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            z-index: 2;
+        }
+        
+        .piece:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.7);
+        }
+        
+        .piece.selected {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px gold;
+        }
+        
+        .piece.king::after {
+            content: "♔";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 1.5rem;
+            color: rgba(0, 0, 0, 0.7);
+        }
+        
+        .possible-move {
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            background-color: rgba(0, 255, 0, 0.5);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        .capture-move {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 0, 0, 0.2);
+            border-radius: 50%;
+            z-index: 1;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        
+        .current-turn {
+            animation: pulse 1.5s infinite;
+        }
+        
+        .move-history {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        /* Custom scrollbar */
+        .move-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .move-history::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .move-history::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 10px;
+        }
+        
+        .move-history::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+    </style>
 </head>
-<body>
-  <div class="container">
-    <h1>مرحبًا بك في OmniAI!</h1>
-    <p>يرجى إدخال مفتاح OpenAI الخاص بك للبدء:</p>
-    <input type="text" id="apiKey" placeholder="أدخل مفتاح API هنا" dir="ltr">
-    <button onclick="startChat()">ابدأ الدردشة</button>
+<body class="bg-gray-100 min-h-screen flex flex-col items-center py-8">
+    <header class="text-center mb-8">
+        <h1 class="text-4xl md:text-5xl font-bold text-indigo-800 mb-2">Quick Checkers</h1>
+        <p class="text-lg text-gray-700">Play the classic Draughts game online or offline</p>
+    </header>
 
-    <div id="chatContainer" style="display:none;">
-      <div id="chatBox"></div>
-      <input type="text" id="userInput" placeholder="اكتب رسالتك..." onkeydown="handleKey(event)">
-      <button onclick="sendMessage()">إرسال</button>
+    <div class="flex flex-col lg:flex-row items-center lg:items-start gap-8 w-full max-w-6xl px-4">
+        <!-- Game board -->
+        <div class="flex flex-col items-center">
+            <div class="board bg-amber-800" id="board"></div>
+            
+            <div class="mt-6 flex gap-4">
+                <button id="newGameBtn" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                    <i class="fas fa-plus mr-2"></i>New Game
+                </button>
+                <button id="undoBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                    <i class="fas fa-undo mr-2"></i>Undo
+                </button>
+                <button id="hintBtn" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg font-medium transition">
+                    <i class="fas fa-lightbulb mr-2"></i>Hint
+                </button>
+            </div>
+        </div>
+        
+        <!-- Game info -->
+        <div class="w-full lg:w-80 bg-white rounded-xl shadow-lg p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold text-gray-800">Game Status</h2>
+                <div id="gameStatus" class="px-3 py-1 rounded-full bg-yellow-100 text-yellow-800 text-sm font-medium">
+                    Your Turn
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <div class="w-6 h-6 rounded-full bg-red-600 mr-2"></div>
+                        <span class="font-medium">Player 1</span>
+                    </div>
+                    <span id="player1Score" class="font-bold">12</span>
+                </div>
+                
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center">
+                        <div class="w-6 h-6 rounded-full bg-black mr-2"></div>
+                        <span class="font-medium">Player 2</span>
+                    </div>
+                    <span id="player2Score" class="font-bold">12</span>
+                </div>
+            </div>
+            
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-800 mb-2">Turn</h3>
+                <div id="turnIndicator" class="flex items-center">
+                    <div class="piece w-8 h-8 bg-red-600 current-turn mr-3"></div>
+                    <span>Player 1's turn</span>
+                </div>
+            </div>
+            
+            <div>
+                <h3 class="font-bold text-gray-800 mb-2">Move History</h3>
+                <div id="moveHistory" class="move-history bg-gray-50 p-3 rounded-lg text-sm">
+                    <!-- Move history will be added here -->
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-  <script src="script.js"></script>
-</body>
-</html>
+    
+    <!-- Game modes modal -->
+    <div id="gameModesModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-xl p-6 w-full max-w-md">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Select Game Mode</h2>
+            
+            <div class="space-y-3">
+                <button id="vsHumanBtn" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 px-4 rounded-lg font-medium text-left flex items-center justify-between transition">
+                    <span>
+                        <i class="fas fa-user-friends mr-2"></i> Play vs Human
+                    </span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                
+                <button id="vsComputerBtn" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg font-medium text-left flex items-center justify-between transition">
+                    <span>
+                        <i class="fas fa-robot mr-2"></i> Play vs Computer
+                    </span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+                
+                <button id="onlineBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-lg font-medium text-left flex items-center justify-between transition">
+                    <span>
+                        <i class="fas fa-globe mr-2"></i> Play Online
+                    </span>
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            
+            <button id="closeModalBtn" class="mt-6 text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times mr-1"></i> Cancel
+            </button>
+        </div>
+    </div>
+    
+    <footer class="mt-12 text-center text-gray-600 text-sm">
+        <p>© 2023 Quick Checkers. All rights reserved.</p>
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game state
+            const gameState = {
+                board: [],
+                currentPlayer: 1, // 1 for player 1 (red), 2 for player 2 (black)
+                selectedPiece: null,
+                possibleMoves: [],
+                gameMode: null, // 'human', 'computer', 'online'
+                moveHistory: [],
+                player1Score: 12,
+                player2Score: 12,
+                isGameOver: false
+            };
+            
+            // DOM elements
+            const boardElement = document.getElementById('board');
+            const gameStatusElement = document.getElementById('gameStatus');
+            const player1ScoreElement = document.getElementById('player1Score');
+            const player2ScoreElement = document.getElementById('player2Score');
+            const turnIndicatorElement = document.getElementById('turnIndicator');
+            const moveHistoryElement = document.getElementById('moveHistory');
+            const newGameBtn = document.getElementById('newGameBtn');
+            const undoBtn = document.getElementById('undoBtn');
+            const hintBtn = document.getElementById('hintBtn');
+            const gameModesModal = document.getElementById('gameModesModal');
+            const vsHumanBtn = document.getElementById('vsHumanBtn');
+            const vsComputerBtn = document.getElementById('vsComputerBtn');
+            const onlineBtn = document.getElementById('onlineBtn');
+            const closeModalBtn = document.getElementById('closeModalBtn');
+            
+            // Initialize the game
+            function initGame() {
+                // Initialize board
+                gameState.board = Array(8).fill().map(() => Array(8).fill(null));
+                
+                // Set up pieces
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        if ((row + col) % 2 === 1) {
+                            if (row < 3) {
+                                gameState.board[row][col] = { player: 2, isKing: false };
+                            } else if (row > 4) {
+                                gameState.board[row][col] = { player: 1, isKing: false };
+                            }
+                        }
+                    }
+                }
+                
+                gameState.currentPlayer = 1;
+                gameState.selectedPiece = null;
+                gameState.possibleMoves = [];
+                gameState.moveHistory = [];
+                gameState.player1Score = 12;
+                gameState.player2Score = 12;
+                gameState.isGameOver = false;
+                
+                updateUI();
+                renderBoard();
+            }
+            
+            // Render the board
+            function renderBoard() {
+                boardElement.innerHTML = '';
+                
+                for (let row = 0; row < 8; row++) {
+                    for (let col = 0; col < 8; col++) {
+                        const cell = document.createElement('div');
+                        cell.className = `cell ${(row + col) % 2 === 0 ? 'bg-amber-100' : 'bg-amber-900'}`;
+                        cell.dataset.row = row;
+                        cell.dataset.col = col;
+                        
+                        // Add click event for selecting cells
+                        cell.addEventListener('click', () => handleCellClick(row, col));
+                        
+                        // Add piece if exists
+                        const piece = gameState.board[row][col];
+                        if (piece) {
+                            const pieceElement = document.createElement('div');
+                            pieceElement.className = `piece ${piece.player === 1 ? 'bg-red-600' : 'bg-black'} ${piece.isKing ? 'king' : ''}`;
+                            pieceElement.dataset.player = piece.player;
+                            pieceElement.dataset.isKing = piece.isKing;
+                            cell.appendChild(pieceElement);
+                        }
+                        
+                        // Highlight selected piece
+                        if (gameState.selectedPiece && gameState.selectedPiece.row === row && gameState.selectedPiece.col === col) {
+                            const pieceElement = cell.querySelector('.piece');
+                            if (pieceElement) pieceElement.classList.add('selected');
+                        }
+                        
+                        // Show possible moves
+                        const move = gameState.possibleMoves.find(m => m.to.row === row && m.to.col === col);
+                        if (move) {
+                            const moveIndicator = document.createElement('div');
+                            moveIndicator.className = move.captured ? 'capture-move' : 'possible-move';
+                            cell.appendChild(moveIndicator);
+                        }
+                        
+                        boardElement.appendChild(cell);
+                    }
+                }
+            }
+            
+            // Handle cell click
+            function handleCellClick(row, col) {
+                if (gameState.isGameOver) return;
+                
+                const piece = gameState.board[row][col];
+                
+                // If a piece of the current player is clicked, select it
+                if (piece && piece.player === gameState.currentPlayer) {
+                    gameState.selectedPiece = { row, col };
+                    gameState.possibleMoves = getPossibleMoves(row, col);
+                    renderBoard();
+                    return;
+                }
+                
+                // If a cell is clicked with a selected piece, try to move
+                if (gameState.selectedPiece) {
+                    const move = gameState.possibleMoves.find(m => 
+                        m.to.row === row && m.to.col === col
+                    );
+                    
+                    if (move) {
+                        makeMove(move);
+                    } else {
+                        // Deselect if invalid move
+                        gameState.selectedPiece = null;
+                        gameState.possibleMoves = [];
+                        renderBoard();
+                    }
+                }
+            }
+            
+            // Get possible moves for a piece
+            function getPossibleMoves(row, col) {
+                const piece = gameState.board[row][col];
+                if (!piece) return [];
+                
+                const moves = [];
+                const directions = [];
+                
+                // Determine movement directions based on player and king status
+                if (piece.isKing) {
+                    directions.push({ dr: -1, dc: -1 }); // up-left
+                    directions.push({ dr: -1, dc: 1 });  // up-right
+                    directions.push({ dr: 1, dc: -1 });  // down-left
+                    directions.push({ dr: 1, dc: 1 });   // down-right
+                } else {
+                    if (piece.player === 1) {
+                        directions.push({ dr: -1, dc: -1 }); // up-left
+                        directions.push({ dr: -1, dc: 1 });  // up-right
+                    } else {
+                        directions.push({ dr: 1, dc: -1 });  // down-left
+                        directions.push({ dr: 1, dc: 1 });   // down-right
+                    }
+                }
+                
+                // Check each direction for possible moves
+                for (const dir of directions) {
+                    const newRow = row + dir.dr;
+                    const newCol = col + dir.dc;
+                    
+                    // Check if within bounds
+                    if (newRow >= 0 && newRow < 8 && newCol >= 0 && newCol < 8) {
+                        // Empty cell - regular move
+                        if (!gameState.board[newRow][newCol]) {
+                            moves.push({
+                                from: { row, col },
+                                to: { row: newRow, col: newCol },
+                                captured: null
+                            });
+                        } 
+                        // Opponent's piece - check if can capture
+                        else if (gameState.board[newRow][newCol].player !== piece.player) {
+                            const jumpRow = newRow + dir.dr;
+                            const jumpCol = newCol + dir.dc;
+                            
+                            // Check if landing position is valid and empty
+                            if (jumpRow >= 0 && jumpRow < 8 && jumpCol >= 0 && jumpCol < 8 && 
+                                !gameState.board[jumpRow][jumpCol]) {
+                                moves.push({
+                                    from: { row, col },
+                                    to: { row: jumpRow, col: jumpCol },
+                                    captured: { row: newRow, col: newCol }
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Prioritize captures (mandatory capture rule)
+                const captureMoves = moves.filter(m => m.captured);
+                if (captureMoves.length > 0) {
+                    return captureMoves;
+                }
+                
+                return moves;
+            }
+            
+            // Make a move
+            function makeMove(move) {
+                const { from, to, captured } = move;
+                const piece = gameState.board[from.row][from.col];
+                
+                // Move the piece
+                gameState.board[to.row][to.col] = {...piece};
+                gameState.board[from.row][from.col] = null;
+                
+                // Check for promotion to king
+                if (!piece.isKing) {
+                    if ((piece.player === 1 && to.row === 0) || 
+                        (piece.player === 2 && to.row === 7)) {
+                        gameState.board[to.row][to.col].isKing = true;
+                    }
+                }
+                
+                // Capture opponent's piece if applicable
+                if (captured) {
+                    gameState.board[captured.row][captured.col] = null;
+                    
+                    // Update scores
+                    if (gameState.currentPlayer === 1) {
+                        gameState.player2Score--;
+                    } else {
+                        gameState.player1Score--;
+                    }
+                    
+                    // Add to move history with capture notation
+                    const fromNotation = `${String.fromCharCode(97 + from.col)}${8 - from.row}`;
+                    const toNotation = `${String.fromCharCode(97 + to.col)}${8 - to.row}`;
+                    gameState.moveHistory.push(`${fromNotation}x${toNotation}`);
+                } else {
+                    // Add to move history
+                    const fromNotation = `${String.fromCharCode(97 + from.col)}${8 - from.row}`;
+                    const toNotation = `${String.fromCharCode(97 + to.col)}${8 - to.row}`;
+                    gameState.moveHistory.push(`${fromNotation}-${toNotation}`);
+                }
+                
+                // Check for game over
+                checkGameOver();
+                
+                // Switch player if game isn't over
+                if (!gameState.isGameOver) {
+                    // Check for multi-capture opportunity
+                    const nextCaptures = getPossibleMoves(to
